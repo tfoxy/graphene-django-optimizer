@@ -1,7 +1,7 @@
 import functools
 
 from django.core.exceptions import FieldDoesNotExist
-from django.db.models import Prefetch
+from django.db.models import ForeignKey, Prefetch
 from django.db.models.constants import LOOKUP_SEP
 from graphene.types.resolver import attr_resolver
 from graphene_django import DjangoObjectType
@@ -29,7 +29,7 @@ class QueryOptimizer(object):
     def optimize(self, query):
         store = self._optimize_gql_selections(
             self.root_type,
-            self.root_ast.selection_set.selections,
+            self.root_ast,
         )
         return store.optimize_query(query)
 
@@ -39,16 +39,19 @@ class QueryOptimizer(object):
             a_type = a_type.of_type
         return a_type
 
-    def _optimize_gql_selections(self, field_type, selections):
-        model = field_type.graphene_type._meta.model
+    def _optimize_gql_selections(self, field_type, field_ast):
         store = QueryOptimizerStore()
-        for selection in selections:
+        selection_set = field_ast.selection_set
+        if not selection_set:
+            return store
+        model = field_type.graphene_type._meta.model
+        for selection in selection_set.selections:
             name = selection.name.value
             if isinstance(selection, FragmentSpread):
                 fragment = self.fragments[name]
                 fragment_store = self._optimize_gql_selections(
                     field_type,
-                    fragment.selection_set.selections,
+                    fragment,
                 )
                 store.append(fragment_store)
             else:
@@ -59,26 +62,40 @@ class QueryOptimizer(object):
     def _optimize_field(self, store, model, selection, field_def):
         resolver = field_def.resolver
         name = None
-        if resolver == DjangoObjectType.resolve_id:
-            name = 'id'
-        elif isinstance(resolver, functools.partial):
-            resolver_fn = resolver
-            if resolver_fn.func == DjangoListField.list_resolver:
-                resolver_fn = resolver_fn.args[0]
-            if resolver_fn.func == attr_resolver:
-                name = resolver_fn.args[0]
+        optimization_hints = getattr(resolver, 'optimization_hints', None)
+        if optimization_hints:
+            name = optimization_hints.model_field
+        if not name:
+            if resolver == DjangoObjectType.resolve_id:
+                name = 'id'
+            elif isinstance(resolver, functools.partial):
+                resolver_fn = resolver
+                if resolver_fn.func == DjangoListField.list_resolver:
+                    resolver_fn = resolver_fn.args[0]
+                if resolver_fn.func == attr_resolver:
+                    name = resolver_fn.args[0]
         if name:
             model_field = self._get_model_field_from_name(model, name)
+            if not model_field:
+                return
+            if (
+                isinstance(model_field, ForeignKey) and
+                model_field.name != name and
+                model_field.get_attname() == name
+            ):
+                # If it is a Foreign Key ID,
+                # don't try to select_related or prefetch_related
+                return
             if model_field.many_to_one or model_field.one_to_one:
                 field_store = self._optimize_gql_selections(
                     self._get_type(field_def),
-                    selection.selection_set.selections,
+                    selection,
                 )
                 store.select_related(name, field_store)
             if model_field.one_to_many or model_field.many_to_many:
                 field_store = self._optimize_gql_selections(
                     self._get_type(field_def),
-                    selection.selection_set.selections,
+                    selection,
                 )
                 store.prefetch_related(name, field_store, model_field.related_model)
 
@@ -88,7 +105,7 @@ class QueryOptimizer(object):
         except FieldDoesNotExist:
             descriptor = model.__dict__[name]
             return getattr(descriptor, 'rel', None) \
-                or getattr(descriptor, 'related')  # Django < 1.9
+                or getattr(descriptor, 'related', None)  # Django < 1.9
 
 
 class QueryOptimizerStore():

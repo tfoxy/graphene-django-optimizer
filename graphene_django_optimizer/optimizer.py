@@ -1,5 +1,8 @@
 import functools
 
+from django.core.exceptions import FieldDoesNotExist
+from django.db.models import Prefetch
+from django.db.models.constants import LOOKUP_SEP
 from graphene.types.resolver import attr_resolver
 from graphene_django import DjangoObjectType
 from graphene_django.fields import DjangoListField
@@ -21,48 +24,108 @@ class QueryOptimizer(object):
         self.fragments = info.fragments
         parent_type = get_operation_root_type(info.schema, info.operation)
         field_def = get_field_def(info.schema, parent_type, info.field_name)
-        root_type = field_def.type
-        if hasattr(root_type, 'of_type'):
-            root_type = root_type.of_type
-        self.root_type = root_type
+        self.root_type = self._get_type(field_def)
 
     def optimize(self, query):
-        return self._optimize_gql_selections(
-            query,
+        store = self._optimize_gql_selections(
             self.root_type,
             self.root_ast.selection_set.selections,
         )
+        return store.optimize_query(query)
 
-    def _optimize_gql_selections(self, query, field_type, selections):
+    def _get_type(self, field_def):
+        a_type = field_def.type
+        if hasattr(a_type, 'of_type'):
+            a_type = a_type.of_type
+        return a_type
+
+    def _optimize_gql_selections(self, field_type, selections):
         model = field_type.graphene_type._meta.model
+        store = QueryOptimizerStore()
         for selection in selections:
             name = selection.name.value
             if isinstance(selection, FragmentSpread):
                 fragment = self.fragments[name]
-                query = self._optimize_gql_selections(
-                    query,
+                fragment_store = self._optimize_gql_selections(
                     field_type,
                     fragment.selection_set.selections,
                 )
+                store.append(fragment_store)
             else:
-                field = field_type.fields[name]
-                resolver = field.resolver
-                model_field_name = None
-                if resolver == DjangoObjectType.resolve_id:
-                    model_field_name = 'id'
-                elif isinstance(resolver, functools.partial):
-                    resolver_fn = resolver
-                    if resolver_fn.func == DjangoListField.list_resolver:
-                        resolver_fn = resolver_fn.args[0]
-                    if resolver_fn.func == attr_resolver:
-                        model_field_name = resolver_fn.args[0]
-                if model_field_name:
-                    model_field_name_lookup = model_field_name
-                    if model_field_name_lookup.endswith('_set'):
-                        model_field_name_lookup = model_field_name_lookup[:-4]
-                    value_model_field = model._meta.get_field(model_field_name_lookup)
-                    if value_model_field.many_to_one or value_model_field.one_to_one:
-                        query = query.select_related(model_field_name)
-                    if value_model_field.one_to_many:
-                        query = query.prefetch_related(model_field_name)
+                selection_field_def = field_type.fields[name]
+                self._optimize_field(store, model, selection, selection_field_def)
+        return store
+
+    def _optimize_field(self, store, model, selection, field_def):
+        resolver = field_def.resolver
+        name = None
+        if resolver == DjangoObjectType.resolve_id:
+            name = 'id'
+        elif isinstance(resolver, functools.partial):
+            resolver_fn = resolver
+            if resolver_fn.func == DjangoListField.list_resolver:
+                resolver_fn = resolver_fn.args[0]
+            if resolver_fn.func == attr_resolver:
+                name = resolver_fn.args[0]
+        if name:
+            model_field = self._get_model_field_from_name(model, name)
+            if model_field.many_to_one or model_field.one_to_one:
+                field_store = self._optimize_gql_selections(
+                    self._get_type(field_def),
+                    selection.selection_set.selections,
+                )
+                store.select_related(name, field_store)
+            if model_field.one_to_many or model_field.many_to_many:
+                field_store = self._optimize_gql_selections(
+                    self._get_type(field_def),
+                    selection.selection_set.selections,
+                )
+                store.prefetch_related(name, field_store, model_field.related_model)
+
+    def _get_model_field_from_name(self, model, name):
+        try:
+            return model._meta.get_field(name)
+        except FieldDoesNotExist:
+            descriptor = model.__dict__[name]
+            return getattr(descriptor, 'rel', None) \
+                or getattr(descriptor, 'related')  # Django < 1.9
+
+
+class QueryOptimizerStore():
+    def __init__(self):
+        self.select_list = []
+        self.prefetch_list = []
+
+    def select_related(self, name, store):
+        if len(store.select_list) == 0:
+            self.select_list.append(name)
+        else:
+            for select in store.select_list:
+                self.select_list.append(name + LOOKUP_SEP + select)
+        for prefetch in store.prefetch_list:
+            if isinstance(prefetch, Prefetch):
+                prefetch.add_prefix(name)
+            else:
+                prefetch = name + LOOKUP_SEP + prefetch
+            self.prefetch_list.append(prefetch)
+
+    def prefetch_related(self, name, store, model):
+        if len(store.prefetch_list) == 0 and len(store.select_list) == 0:
+            self.prefetch_list.append(name)
+        elif len(store.select_list) == 0:
+            for prefetch in store.prefetch_list:
+                self.prefetch_list.append(name + LOOKUP_SEP + prefetch)
+        else:
+            queryset = store.optimize_query(model.objects.all())
+            self.prefetch_list.append(Prefetch(name, queryset=queryset))
+
+    def optimize_query(self, query):
+        for select in self.select_list:
+            query = query.select_related(select)
+        for prefetch in self.prefetch_list:
+            query = query.prefetch_related(prefetch)
         return query
+
+    def append(self, store):
+        self.select_list += store.select_list
+        self.prefetch_list += store.prefetch_list

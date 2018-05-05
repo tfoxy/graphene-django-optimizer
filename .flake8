@@ -1,4 +1,5 @@
 [flake8]
 # D100 missing docstring in public module
 # E501 line too long
-ignore = D100,E501
+# E731 do not assign a lambda expression, use a def
+ignore = D100,E501,E731

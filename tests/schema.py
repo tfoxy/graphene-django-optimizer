@@ -12,7 +12,10 @@ from .models import (
 class ItemType(DjangoObjectType):
     parent_id = graphene.ID()
     foo = graphene.String()
-    title = graphene.String()
+    title = gql_optimizer.field(
+        graphene.String(),
+        only='name',
+    )
     unoptimized_title = graphene.String()
     father = gql_optimizer.field(
         graphene.Field('tests.schema.ItemType'),

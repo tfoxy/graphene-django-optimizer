@@ -20,6 +20,7 @@ def test_should_optimize_non_django_field_if_it_has_an_optimization_hint_in_the_
         query {
             items(name: "foo") {
                 id
+                foo
                 childrenNames
             }
         }
@@ -39,6 +40,7 @@ def test_should_optimize_with_prefetch_related_as_a_string():
         query {
             items(name: "foo") {
                 id
+                foo
                 auxChildrenNames
             }
         }
@@ -58,8 +60,10 @@ def test_should_optimize_with_prefetch_related_as_a_function():
         query {
             items(name: "foo") {
                 id
+                foo
                 filteredChildren(name: "bar") {
                     id
+                    foo
                 }
             }
         }
@@ -85,8 +89,10 @@ def test_should_return_valid_result_with_prefetch_related_as_a_function():
         query {
             items(name: "foo") {
                 id
+                foo
                 filteredChildren(name: "bar") {
                     id
+                    foo
                 }
             }
         }

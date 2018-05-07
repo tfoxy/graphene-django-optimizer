@@ -67,18 +67,21 @@ class QueryOptimizer(object):
         return store
 
     def _optimize_field(self, store, model, selection, field_def, parent_type):
-        self._optimize_field_by_name(store, model, selection, field_def, parent_type)
-        self._optimize_field_by_hints(store, selection, field_def, parent_type)
+        optimized = self._optimize_field_by_name(store, model, selection, field_def, parent_type)
+        optimized = self._optimize_field_by_hints(store, selection, field_def, parent_type) or optimized
+        if not optimized:
+            store.abort_only_optimization()
 
     def _optimize_field_by_name(self, store, model, selection, field_def, parent_type):
         name = self._get_name_from_resolver(field_def.resolver)
         if not name:
-            return
+            return False
         model_field = self._get_model_field_from_name(model, name)
         if not model_field:
-            return
+            return False
         if self._is_foreign_key_id(model_field, name):
-            return
+            store.only(name)
+            return True
         if model_field.many_to_one or model_field.one_to_one:
             field_store = self._optimize_gql_selections(
                 self._get_type(field_def),
@@ -86,7 +89,8 @@ class QueryOptimizer(object):
                 parent_type,
             )
             store.select_related(name, field_store)
-        elif model_field.one_to_many or model_field.many_to_many:
+            return True
+        if model_field.one_to_many or model_field.many_to_many:
             field_store = self._optimize_gql_selections(
                 self._get_type(field_def),
                 selection,
@@ -94,6 +98,11 @@ class QueryOptimizer(object):
             )
             related_queryset = model_field.related_model.objects.all()
             store.prefetch_related(name, field_store, related_queryset)
+            return True
+        if not model_field.is_relation:
+            store.only(name)
+            return True
+        return False
 
     def _get_optimization_hints(self, resolver):
         return getattr(resolver, 'optimization_hints', None)
@@ -101,7 +110,7 @@ class QueryOptimizer(object):
     def _optimize_field_by_hints(self, store, selection, field_def, parent_type):
         optimization_hints = self._get_optimization_hints(field_def.resolver)
         if not optimization_hints:
-            return
+            return False
         info = self._create_resolve_info(
             selection.name.value,
             (selection,),
@@ -117,6 +126,12 @@ class QueryOptimizer(object):
             optimization_hints.prefetch_related(info, *args),
             store.prefetch_list,
         )
+        if store.only_list is not None:
+            self._add_optimization_hints(
+                optimization_hints.only(info, *args),
+                store.only_list,
+            )
+        return True
 
     def _add_optimization_hints(self, source, target):
         if source:
@@ -173,37 +188,57 @@ class QueryOptimizerStore():
     def __init__(self):
         self.select_list = []
         self.prefetch_list = []
+        self.only_list = []
 
     def select_related(self, name, store):
-        if len(store.select_list) == 0:
-            self.select_list.append(name)
-        else:
+        if store.select_list:
             for select in store.select_list:
                 self.select_list.append(name + LOOKUP_SEP + select)
+        else:
+            self.select_list.append(name)
         for prefetch in store.prefetch_list:
             if isinstance(prefetch, Prefetch):
                 prefetch.add_prefix(name)
             else:
                 prefetch = name + LOOKUP_SEP + prefetch
             self.prefetch_list.append(prefetch)
+        if self.only_list is not None:
+            if store.only_list is None:
+                self.abort_only_optimization()
+            else:
+                for only in store.only_list:
+                    self.only_list.append(name + LOOKUP_SEP + only)
 
     def prefetch_related(self, name, store, queryset):
-        if len(store.prefetch_list) == 0 and len(store.select_list) == 0:
-            self.prefetch_list.append(name)
-        elif len(store.select_list) == 0:
+        if store.select_list or store.only_list:
+            queryset = store.optimize_queryset(queryset)
+            self.prefetch_list.append(Prefetch(name, queryset=queryset))
+        elif store.prefetch_list:
             for prefetch in store.prefetch_list:
                 self.prefetch_list.append(name + LOOKUP_SEP + prefetch)
         else:
-            queryset = store.optimize_queryset(queryset)
-            self.prefetch_list.append(Prefetch(name, queryset=queryset))
+            self.prefetch_list.append(name)
+
+    def only(self, field):
+        if self.only_list is not None:
+            self.only_list.append(field)
+
+    def abort_only_optimization(self):
+        self.only_list = None
 
     def optimize_queryset(self, queryset):
         for select in self.select_list:
             queryset = queryset.select_related(select)
         for prefetch in self.prefetch_list:
             queryset = queryset.prefetch_related(prefetch)
+        if self.only_list:
+            queryset = queryset.only(*self.only_list)
         return queryset
 
     def append(self, store):
         self.select_list += store.select_list
         self.prefetch_list += store.prefetch_list
+        if store.only_list is None:
+            self.only_list = None
+        else:
+            self.only_list += store.only_list

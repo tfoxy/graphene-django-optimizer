@@ -1,5 +1,13 @@
 # graphene-django-optimizer
 
+
+## Install
+
+```py
+pip install graphene-django-optimizer
+```
+
+
 ## Usage
 
 ```py

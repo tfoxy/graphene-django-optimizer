@@ -22,6 +22,7 @@ setup(
     packages=['graphene_django_optimizer'],
     setup_requires=pytest_runner,
     long_description=read('README.md'),
+    long_description_content_type='text/markdown',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Web Environment',

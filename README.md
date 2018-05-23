@@ -3,12 +3,14 @@
 
 ## Install
 
-```py
+```bash
 pip install graphene-django-optimizer
 ```
 
 
 ## Usage
+
+Having the following schema based on [the tutorial of graphene-django](http://docs.graphene-python.org/projects/django/en/latest/tutorial-plain/#hello-graphql-schema-and-object-types) (notice the use of `gql_optimizer`)
 
 ```py
 # cookbook/ingredients/schema.py
@@ -39,6 +41,58 @@ class Query(object):
 
     def resolve_all_ingredients(root, info):
         return gql_optimizer.query(Ingredient.objects.all(), info)
+```
+
+
+We will show some graphql queries and the queryset that will be executed.
+
+Fetching all the ingredients with the related category:
+
+```graphql
+{
+  all_ingredients {
+    id
+    name
+    category {
+        id
+        name
+    }
+  }
+}
+```
+
+```py
+ingredients = (
+    Ingredient.objects
+    .select_related('category')
+    .only('id', 'name', 'category__id', 'category__name')
+)
+```
+
+Fetching all the categories with the related ingredients:
+
+```graphql
+{
+  all_categories {
+    id
+    name
+    ingredients {
+        id
+        name
+    }
+  }
+}
+```
+
+```py
+categories = (
+    Category.objects
+    .only('id', 'name')
+    .prefetch_related(Prefetch(
+        'ingredients',
+        queryset=Ingredient.objects.only('id', 'name'),
+    ))
+)
 ```
 
 

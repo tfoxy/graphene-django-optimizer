@@ -64,6 +64,7 @@ Fetching all the ingredients with the related category:
 ```
 
 ```py
+# optimized queryset:
 ingredients = (
     Ingredient.objects
     .select_related('category')
@@ -87,6 +88,7 @@ Fetching all the categories with the related ingredients:
 ```
 
 ```py
+# optimized queryset:
 categories = (
     Category.objects
     .only('id', 'name')

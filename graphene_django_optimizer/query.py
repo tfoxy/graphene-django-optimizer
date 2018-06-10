@@ -10,7 +10,14 @@ from graphql import ResolveInfo
 from graphql.execution.base import (
     get_field_def,
 )
-from graphql.language.ast import FragmentSpread
+from graphql.language.ast import (
+    FragmentSpread,
+    InlineFragment,
+)
+from graphql.type.definition import (
+    GraphQLInterfaceType,
+    GraphQLUnionType,
+)
 
 from .utils import is_iterable
 
@@ -29,7 +36,7 @@ class QueryOptimizer(object):
         store = self._optimize_gql_selections(
             self._get_type(field_def),
             info.field_asts[0],
-            info.parent_type,
+            # info.parent_type,
         )
         return store.optimize_queryset(queryset)
 
@@ -39,40 +46,66 @@ class QueryOptimizer(object):
             a_type = a_type.of_type
         return a_type
 
-    def _optimize_gql_selections(self, field_type, field_ast, parent_type):
+    def _optimize_gql_selections(self, field_type, field_ast):
         store = QueryOptimizerStore()
         selection_set = field_ast.selection_set
         if not selection_set:
             return store
-        model = field_type.graphene_type._meta.model
+        optimized_fields_by_model = {}
+        schema = self.root_info.schema
+        graphql_type = schema.get_graphql_type(field_type.graphene_type)
+        if isinstance(graphql_type, GraphQLUnionType) or isinstance(graphql_type, GraphQLInterfaceType):
+            possible_types = schema.get_possible_types(graphql_type)
+        else:
+            possible_types = (field_type, )
         for selection in selection_set.selections:
-            name = selection.name.value
-            if isinstance(selection, FragmentSpread):
-                fragment = self.root_info.fragments[name]
-                fragment_store = self._optimize_gql_selections(
-                    field_type,
-                    fragment,
-                    parent_type,
-                )
-                store.append(fragment_store)
+            if isinstance(selection, InlineFragment):
+                fragment_type_name = selection.type_condition.name.value
+                fragment_type = schema.get_type(fragment_type_name)
+                fragment_model = fragment_type.graphene_type._meta.model
+                parent_model = possible_types[0].graphene_type._meta.model
+                path_from_parent = fragment_model._meta.get_path_from_parent(parent_model)
+                select_related_name = LOOKUP_SEP.join(p.join_field.name for p in path_from_parent)
+                if select_related_name:
+                    fragment_store = self._optimize_gql_selections(
+                        fragment_type,
+                        selection,
+                        # parent_type,
+                    )
+                    store.select_related(select_related_name, fragment_store)
             else:
-                selection_field_def = field_type.fields[name]
-                self._optimize_field(
-                    store,
-                    model,
-                    selection,
-                    selection_field_def,
-                    field_type,
-                )
+                name = selection.name.value
+                if isinstance(selection, FragmentSpread):
+                    fragment = self.root_info.fragments[name]
+                    fragment_store = self._optimize_gql_selections(
+                        field_type,
+                        fragment,
+                        # parent_type,
+                    )
+                    store.append(fragment_store)
+                else:
+                    for possible_type in possible_types:
+                        selection_field_def = possible_type.fields.get(name)
+                        if selection_field_def:
+                            model = possible_type.graphene_type._meta.model
+                            field_model = optimized_fields_by_model.setdefault(name, model)
+                            if field_model == model:
+                                self._optimize_field(
+                                    store,
+                                    model,
+                                    selection,
+                                    selection_field_def,
+                                    possible_type,
+                                )
         return store
 
     def _optimize_field(self, store, model, selection, field_def, parent_type):
-        optimized = self._optimize_field_by_name(store, model, selection, field_def, parent_type)
+        optimized = self._optimize_field_by_name(store, model, selection, field_def)
         optimized = self._optimize_field_by_hints(store, selection, field_def, parent_type) or optimized
         if not optimized:
             store.abort_only_optimization()
 
-    def _optimize_field_by_name(self, store, model, selection, field_def, parent_type):
+    def _optimize_field_by_name(self, store, model, selection, field_def):
         name = self._get_name_from_resolver(field_def.resolver)
         if not name:
             return False
@@ -86,7 +119,7 @@ class QueryOptimizer(object):
             field_store = self._optimize_gql_selections(
                 self._get_type(field_def),
                 selection,
-                parent_type,
+                # parent_type,
             )
             store.select_related(name, field_store)
             return True
@@ -94,7 +127,7 @@ class QueryOptimizer(object):
             field_store = self._optimize_gql_selections(
                 self._get_type(field_def),
                 selection,
-                parent_type,
+                # parent_type,
             )
             related_queryset = model_field.related_model.objects.all()
             store.prefetch_related(name, field_store, related_queryset)
@@ -158,7 +191,9 @@ class QueryOptimizer(object):
         try:
             return model._meta.get_field(name)
         except FieldDoesNotExist:
-            descriptor = model.__dict__[name]
+            descriptor = model.__dict__.get(name)
+            if not descriptor:
+                return None
             return getattr(descriptor, 'rel', None) \
                 or getattr(descriptor, 'related', None)  # Django < 1.9
 

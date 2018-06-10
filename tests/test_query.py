@@ -5,6 +5,8 @@ import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
 from .models import (
+    DetailedItem,
+    ExtraDetailedItem,
     Item,
 )
 from .schema import schema
@@ -345,5 +347,52 @@ def test_should_fetch_fields_of_prefetched_field():
     items = gql_optimizer.query(qs, info)
     optimized_items = qs.prefetch_related(
         Prefetch('children', queryset=Item.objects.only('id')),
+    )
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_fetch_child_model_field_for_interface_field():
+    Item.objects.create(name='foo')
+    ExtraDetailedItem.objects.create(name='foo', extra_detail='test')
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                ... on ExtraDetailedItemType {
+                    extraDetail
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = (
+        qs
+        .select_related('detaileditem__extradetaileditem')
+        .only('id', 'detaileditem__extradetaileditem__extra_detail')
+    )
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.skip(reason='will be tested in the future')
+@pytest.mark.django_db
+def test_should_fetch_field_of_child_model_when_parent_has_no_optimized_field():
+    Item.objects.create(name='foo')
+    DetailedItem.objects.create(name='foo', item_type='test')
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                item_type
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = (
+        qs
+        .select_related('detaileditem')
+        .only('id', 'detaileditem__item_type')
     )
     assert_query_equality(items, optimized_items)

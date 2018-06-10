@@ -97,4 +97,5 @@ def test_should_return_valid_result_with_prefetch_related_as_a_function():
             }
         }
     ''')
+    assert not result.errors
     assert result.data['items'][0]['filteredChildren'][0]['id'] == '2'

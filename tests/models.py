@@ -6,13 +6,28 @@ class Item(models.Model):
     parent = models.ForeignKey('Item', null=True, related_name='children')
     item = models.ForeignKey('Item', null=True)
 
+    item_type = 'simple'
+
     @property
     def title(self):
         return self.name
 
     @property
     def unoptimized_title(self):
-        return self.unoptimized_title
+        return self.title
 
     def all_children(self):
         return self.children.all()
+
+
+class DetailedItem(Item):
+    detail = models.TextField(null=True)
+    item_type = models.CharField(max_length=100, null=True)
+
+
+class RelatedItem(Item):
+    related_items = models.ManyToManyField(Item)
+
+
+class ExtraDetailedItem(DetailedItem):
+    extra_detail = models.TextField()

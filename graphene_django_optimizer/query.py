@@ -64,7 +64,11 @@ class QueryOptimizer(object):
                 fragment_type = schema.get_type(fragment_type_name)
                 fragment_model = fragment_type.graphene_type._meta.model
                 parent_model = possible_types[0].graphene_type._meta.model
-                path_from_parent = fragment_model._meta.get_path_from_parent(parent_model)
+                path_from_parent = (
+                    fragment_model._meta.get_path_from_parent(parent_model)
+                    if hasattr(fragment_model._meta, 'get_path_from_parent')
+                    else _get_path_from_parent(fragment_model._meta, parent_model)
+                )
                 select_related_name = LOOKUP_SEP.join(p.join_field.name for p in path_from_parent)
                 if select_related_name:
                     fragment_store = self._optimize_gql_selections(
@@ -277,3 +281,27 @@ class QueryOptimizerStore():
             self.only_list = None
         else:
             self.only_list += store.only_list
+
+
+# For legacy Django versions:
+def _get_path_from_parent(self, parent):
+    """
+    Return a list of PathInfos containing the path from the parent
+    model to the current model, or an empty list if parent is not a
+    parent of the current model.
+    """
+    if self.model is parent:
+        return []
+    model = self.concrete_model
+    # Get a reversed base chain including both the current and parent
+    # models.
+    chain = model._meta.get_base_chain(parent)
+    chain.reverse()
+    chain.append(model)
+    # Construct a list of the PathInfos between models in chain.
+    path = []
+    for i, ancestor in enumerate(chain[:-1]):
+        child = chain[i + 1]
+        link = child._meta.get_ancestor_link(ancestor)
+        path.extend(link.get_reverse_path_info())
+    return path

@@ -1,4 +1,6 @@
 venv/
+venv2/
+venv3/
 *.pyc
 .vscode/
 *.egg-info/

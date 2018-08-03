@@ -1,5 +1,10 @@
 # graphene-django-optimizer
 
+[![build status](https://img.shields.io/travis/tfoxy/graphene-django-optimizer.svg)](https://travis-ci.org/tfoxy/graphene-django-optimizer)
+[![PyPI version](https://img.shields.io/pypi/v/graphene-django-optimizer.svg)](https://pypi.org/project/graphene-django-optimizer/)
+![python version](https://img.shields.io/pypi/pyversions/graphene-django-optimizer.svg)
+![django version](https://img.shields.io/pypi/djversions/graphene-django-optimizer.svg)
+
 Optimize queries executed by [graphene-django](https://github.com/graphql-python/graphene-django) automatically, using [`select_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#select-related), [`prefetch_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#prefetch-related) and [`only`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#only) methods of Django QuerySet.
 
 

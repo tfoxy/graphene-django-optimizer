@@ -1,6 +1,3 @@
--r requirements.txt
-django==1.11.12
-graphene==2.1
-graphene-django==2.0.0
-pytest==3.5.1
-pytest-django==3.2.1
+-r dev-env-requirements.txt
+django==2.1
+flake8==3.5.0

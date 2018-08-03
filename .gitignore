@@ -8,3 +8,4 @@ venv3/
 .pytest_cache/
 dist/
 build/
+.coverage

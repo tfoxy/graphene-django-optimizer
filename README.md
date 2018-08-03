@@ -1,6 +1,7 @@
 # graphene-django-optimizer
 
 [![build status](https://img.shields.io/travis/tfoxy/graphene-django-optimizer.svg)](https://travis-ci.org/tfoxy/graphene-django-optimizer)
+[![coverage](https://img.shields.io/codecov/c/github/tfoxy/graphene-django-optimizer.svg)](https://codecov.io/gh/tfoxy/graphene-django-optimizer)
 [![PyPI version](https://img.shields.io/pypi/v/graphene-django-optimizer.svg)](https://pypi.org/project/graphene-django-optimizer/)
 ![python version](https://img.shields.io/pypi/pyversions/graphene-django-optimizer.svg)
 ![django version](https://img.shields.io/pypi/djversions/graphene-django-optimizer.svg)

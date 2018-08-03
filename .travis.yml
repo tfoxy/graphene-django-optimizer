@@ -22,5 +22,8 @@ matrix:
 install:
   - pip install -r dev-env-requirements.txt
   - pip install django==$DJANGO_VERSION
+  - pip install codecov
 script:
   - ./setup.py test
+after_success:
+  - codecov

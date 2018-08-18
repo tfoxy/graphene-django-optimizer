@@ -11,6 +11,7 @@ pytest_runner = ['pytest-runner >=4.0,<5dev'] if needs_pytest else []
 def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+
 setup(
     name='graphene-django-optimizer',
     version='0.2.0',

@@ -182,7 +182,7 @@ class QueryOptimizer(object):
             name = optimization_hints.model_field
             if name:
                 return name
-        if resolver == DjangoObjectType.resolve_id:
+        if self._is_resolver_for_id_field(resolver):
             return 'id'
         elif isinstance(resolver, functools.partial):
             resolver_fn = resolver
@@ -190,6 +190,13 @@ class QueryOptimizer(object):
                 resolver_fn = resolver_fn.args[0]
             if resolver_fn.func == attr_resolver:
                 return resolver_fn.args[0]
+
+    def _is_resolver_for_id_field(self, resolver):
+        resolve_id = DjangoObjectType.resolve_id
+        # For python 2 unbound method:
+        if hasattr(resolve_id, 'im_func'):
+            resolve_id = resolve_id.im_func
+        return resolver == resolve_id
 
     def _get_model_field_from_name(self, model, name):
         try:

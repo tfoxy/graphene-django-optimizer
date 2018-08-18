@@ -42,7 +42,7 @@ class QueryOptimizer(object):
 
     def _get_type(self, field_def):
         a_type = field_def.type
-        if hasattr(a_type, 'of_type'):
+        while hasattr(a_type, 'of_type'):
             a_type = a_type.of_type
         return a_type
 
@@ -91,16 +91,29 @@ class QueryOptimizer(object):
                     for possible_type in possible_types:
                         selection_field_def = possible_type.fields.get(name)
                         if selection_field_def:
-                            model = possible_type.graphene_type._meta.model
-                            field_model = optimized_fields_by_model.setdefault(name, model)
-                            if field_model == model:
-                                self._optimize_field(
-                                    store,
-                                    model,
+                            graphene_type = possible_type.graphene_type
+                            # Check if graphene type is a relay connection or a relay edge
+                            if hasattr(graphene_type._meta, 'node') or (
+                                hasattr(graphene_type, 'cursor') and
+                                hasattr(graphene_type, 'node')
+                            ):
+                                relay_store = self._optimize_gql_selections(
+                                    self._get_type(selection_field_def),
                                     selection,
-                                    selection_field_def,
-                                    possible_type,
                                 )
+                                store.append(relay_store)
+                            else:
+                                model = graphene_type._meta.model
+                                if name not in optimized_fields_by_model:
+                                    field_model = optimized_fields_by_model[name] = model
+                                    if field_model == model:
+                                        self._optimize_field(
+                                            store,
+                                            model,
+                                            selection,
+                                            selection_field_def,
+                                            possible_type,
+                                        )
         return store
 
     def _optimize_field(self, store, model, selection, field_def, parent_type):

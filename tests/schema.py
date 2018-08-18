@@ -1,5 +1,6 @@
 from django.db.models import Prefetch
 import graphene
+from graphene_django.fields import DjangoConnectionField
 from graphene_django.types import DjangoObjectType
 import graphene_django_optimizer as gql_optimizer
 
@@ -12,7 +13,7 @@ from .models import (
 
 
 class ItemInterface(graphene.Interface):
-    id = graphene.ID()
+    id = graphene.ID(required=True)
     parent_id = graphene.ID()
     foo = graphene.String()
     title = graphene.String()
@@ -53,6 +54,21 @@ class ItemInterface(graphene.Interface):
         return getattr(root, 'gql_filtered_children_' + name)
 
 
+class ItemNode(DjangoObjectType):
+    title = gql_optimizer.field(
+        graphene.String(),
+        only='name',
+    )
+    father = gql_optimizer.field(
+        graphene.Field('tests.schema.ItemType'),
+        model_field='parent',
+    )
+
+    class Meta:
+        model = Item
+        interfaces = (graphene.relay.Node, ItemInterface, )
+
+
 class ItemType(DjangoObjectType):
     title = gql_optimizer.field(
         graphene.String(),
@@ -88,9 +104,13 @@ class ExtraDetailedItemType(DetailedItemType):
 
 class Query(graphene.ObjectType):
     items = graphene.List(ItemInterface, name=graphene.String(required=True))
+    relay_items = DjangoConnectionField(ItemNode)
 
     def resolve_items(root, info, name):
         return gql_optimizer.query(Item.objects.filter(name=name), info)
+
+    def resolve_relay_items(root, info):
+        return gql_optimizer.query(Item.objects.all(), info)
 
 
 schema = graphene.Schema(query=Query)

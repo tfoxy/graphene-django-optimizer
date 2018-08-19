@@ -1,4 +1,5 @@
 import functools
+import sys
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import ForeignKey, Prefetch
@@ -102,6 +103,8 @@ class QueryOptimizer(object):
                                     selection,
                                 )
                                 store.append(relay_store)
+                                if sys.version_info[0] < 3:
+                                    store.abort_only_optimization()
                             else:
                                 model = graphene_type._meta.model
                                 if name not in optimized_fields_by_model:

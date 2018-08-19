@@ -102,6 +102,10 @@ class QueryOptimizer(object):
                                     selection,
                                 )
                                 store.append(relay_store)
+                                try:
+                                    from django.db.models import DEFERRED  # noqa: F401
+                                except ImportError:
+                                    store.abort_only_optimization()
                             else:
                                 model = graphene_type._meta.model
                                 if name not in optimized_fields_by_model:

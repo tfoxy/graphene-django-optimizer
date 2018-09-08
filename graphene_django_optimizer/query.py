@@ -107,8 +107,8 @@ class QueryOptimizer(object):
                                 except ImportError:
                                     store.abort_only_optimization()
                             else:
-                                model = graphene_type._meta.model
-                                if name not in optimized_fields_by_model:
+                                model = getattr(graphene_type._meta, 'model', None)
+                                if model and name not in optimized_fields_by_model:
                                     field_model = optimized_fields_by_model[name] = model
                                     if field_model == model:
                                         self._optimize_field(

@@ -73,3 +73,51 @@ def test_should_reduce_number_of_queries_in_relay_schema_by_using_prefetch_relat
     items = gql_optimizer.query(qs, info)
     optimized_items = qs.prefetch_related('children')
     assert_query_equality(items, optimized_items)
+
+
+def test_should_optimize_query_by_only_requesting_id_field():
+    try:
+        from django.db.models import DEFERRED  # noqa: F401
+    except ImportError:
+        # Query cannot be optimized if DEFERRED is not present.
+        # When the ConnectionField is used, it will throw the following error:
+        # Expected value of type "ItemNode" but got: Item_Deferred_item_id_parent_id.
+        return
+    info = create_resolve_info(schema, '''
+        query {
+            relayItems {
+                edges {
+                    node {
+                        id
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only('id')
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_work_fine_with_page_info_field():
+    Item.objects.create(id=7, name='foo')
+    Item.objects.create(id=13, name='bar')
+    Item.objects.create(id=17, name='foobar')
+    result = schema.execute('''
+        query {
+            relayItems(first: 2) {
+                pageInfo {
+                    hasNextPage
+                }
+                edges {
+                    node {
+                        id
+                    }
+                }
+            }
+        }
+    ''')
+    assert not result.errors
+    assert result.data['relayItems']['pageInfo']['hasNextPage'] is True

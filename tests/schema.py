@@ -109,7 +109,7 @@ class Query(graphene.ObjectType):
     def resolve_items(root, info, name):
         return gql_optimizer.query(Item.objects.filter(name=name), info)
 
-    def resolve_relay_items(root, info):
+    def resolve_relay_items(root, info, **kwargs):
         return gql_optimizer.query(Item.objects.all(), info)
 
 

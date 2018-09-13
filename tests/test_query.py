@@ -394,3 +394,24 @@ def test_should_fetch_field_of_child_model_when_parent_has_no_optimized_field():
         .only('id', 'detaileditem__item_type')
     )
     assert_query_equality(items, optimized_items)
+
+
+def test_should_fetch_field_inside_interface_fragment():
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                ... on DetailedInterface {
+                    detail
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = (
+        qs
+        .select_related('detaileditem')
+        .only('id', 'detaileditem__detail')
+    )
+    assert_query_equality(items, optimized_items)

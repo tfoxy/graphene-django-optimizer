@@ -46,6 +46,12 @@ class QueryOptimizer(object):
             a_type = a_type.of_type
         return a_type
 
+    def _get_possible_types(self, graphql_type):
+        if isinstance(graphql_type, (GraphQLInterfaceType, GraphQLUnionType)):
+            return self.root_info.schema.get_possible_types(graphql_type)
+        else:
+            return (graphql_type, )
+
     def _optimize_gql_selections(self, field_type, field_ast):
         store = QueryOptimizerStore()
         selection_set = field_ast.selection_set
@@ -54,29 +60,28 @@ class QueryOptimizer(object):
         optimized_fields_by_model = {}
         schema = self.root_info.schema
         graphql_type = schema.get_graphql_type(field_type.graphene_type)
-        if isinstance(graphql_type, GraphQLUnionType) or isinstance(graphql_type, GraphQLInterfaceType):
-            possible_types = schema.get_possible_types(graphql_type)
-        else:
-            possible_types = (field_type, )
+        possible_types = self._get_possible_types(graphql_type)
         for selection in selection_set.selections:
             if isinstance(selection, InlineFragment):
                 fragment_type_name = selection.type_condition.name.value
                 fragment_type = schema.get_type(fragment_type_name)
-                fragment_model = fragment_type.graphene_type._meta.model
-                parent_model = possible_types[0].graphene_type._meta.model
-                path_from_parent = (
-                    fragment_model._meta.get_path_from_parent(parent_model)
-                    if hasattr(fragment_model._meta, 'get_path_from_parent')
-                    else _get_path_from_parent(fragment_model._meta, parent_model)
-                )
-                select_related_name = LOOKUP_SEP.join(p.join_field.name for p in path_from_parent)
-                if select_related_name:
-                    fragment_store = self._optimize_gql_selections(
-                        fragment_type,
-                        selection,
-                        # parent_type,
+                fragment_possible_types = self._get_possible_types(fragment_type)
+                for fragment_possible_type in fragment_possible_types:
+                    fragment_model = fragment_possible_type.graphene_type._meta.model
+                    parent_model = possible_types[0].graphene_type._meta.model
+                    path_from_parent = (
+                        fragment_model._meta.get_path_from_parent(parent_model)
+                        if hasattr(fragment_model._meta, 'get_path_from_parent')
+                        else _get_path_from_parent(fragment_model._meta, parent_model)
                     )
-                    store.select_related(select_related_name, fragment_store)
+                    select_related_name = LOOKUP_SEP.join(p.join_field.name for p in path_from_parent)
+                    if select_related_name:
+                        fragment_store = self._optimize_gql_selections(
+                            fragment_possible_type,
+                            selection,
+                            # parent_type,
+                        )
+                        store.select_related(select_related_name, fragment_store)
             else:
                 name = selection.name.value
                 if isinstance(selection, FragmentSpread):

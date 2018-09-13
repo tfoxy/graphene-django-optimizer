@@ -84,10 +84,14 @@ class ItemType(DjangoObjectType):
         interfaces = (ItemInterface, )
 
 
+class DetailedInterface(graphene.Interface):
+    detail = graphene.String()
+
+
 class DetailedItemType(ItemType):
     class Meta:
         model = DetailedItem
-        interfaces = (ItemInterface, )
+        interfaces = (ItemInterface, DetailedInterface)
 
 
 class RelatedItemType(ItemType):

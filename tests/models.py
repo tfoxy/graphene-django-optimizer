@@ -31,3 +31,7 @@ class RelatedItem(Item):
 
 class ExtraDetailedItem(DetailedItem):
     extra_detail = models.TextField()
+
+
+class UnrelatedModel(models.Model):
+    detail = models.TextField(null=True)

@@ -302,10 +302,11 @@ class QueryOptimizerStore():
     def append(self, store):
         self.select_list += store.select_list
         self.prefetch_list += store.prefetch_list
-        if store.only_list is None:
-            self.only_list = None
-        else:
-            self.only_list += store.only_list
+        if self.only_list is not None:
+            if store.only_list is None:
+                self.only_list = None
+            else:
+                self.only_list += store.only_list
 
 
 # For legacy Django versions:

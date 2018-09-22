@@ -121,3 +121,27 @@ def test_should_work_fine_with_page_info_field():
     ''')
     assert not result.errors
     assert result.data['relayItems']['pageInfo']['hasNextPage'] is True
+
+
+@pytest.mark.django_db
+def test_should_work_fine_with_page_info_field_below_edges_field_when_only_optimization_is_aborted():
+    Item.objects.create(id=7, name='foo')
+    Item.objects.create(id=13, name='bar')
+    Item.objects.create(id=17, name='foobar')
+    result = schema.execute('''
+        query {
+            relayItems(first: 2) {
+                edges {
+                    node {
+                        id
+                        foo
+                    }
+                }
+                pageInfo {
+                    hasNextPage
+                }
+            }
+        }
+    ''')
+    assert not result.errors
+    assert result.data['relayItems']['pageInfo']['hasNextPage'] is True

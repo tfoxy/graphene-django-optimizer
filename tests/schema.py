@@ -55,7 +55,7 @@ class ItemInterface(graphene.Interface):
         return getattr(root, 'gql_filtered_children_' + name)
 
 
-class ItemNode(DjangoObjectType):
+class BaseItemType(DjangoObjectType):
     title = gql_optimizer.field(
         graphene.String(),
         only='name',
@@ -67,19 +67,15 @@ class ItemNode(DjangoObjectType):
 
     class Meta:
         model = Item
+
+
+class ItemNode(BaseItemType):
+    class Meta:
+        model = Item
         interfaces = (graphene.relay.Node, ItemInterface, )
 
 
-class ItemType(DjangoObjectType):
-    title = gql_optimizer.field(
-        graphene.String(),
-        only='name',
-    )
-    father = gql_optimizer.field(
-        graphene.Field('tests.schema.ItemType'),
-        model_field='parent',
-    )
-
+class ItemType(BaseItemType):
     class Meta:
         model = Item
         interfaces = (ItemInterface, )

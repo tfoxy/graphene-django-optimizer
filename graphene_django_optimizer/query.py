@@ -52,6 +52,13 @@ class QueryOptimizer(object):
         else:
             return (graphql_type, )
 
+    def _get_base_model(self, graphql_types):
+        models = tuple(t.graphene_type._meta.model for t in graphql_types)
+        for model in models:
+            if all(issubclass(m, model) for m in models):
+                return model
+        return None
+
     def _optimize_gql_selections(self, field_type, field_ast):
         store = QueryOptimizerStore()
         selection_set = field_ast.selection_set
@@ -68,16 +75,17 @@ class QueryOptimizer(object):
                 fragment_possible_types = self._get_possible_types(fragment_type)
                 for fragment_possible_type in fragment_possible_types:
                     fragment_model = fragment_possible_type.graphene_type._meta.model
-                    parent_model = possible_types[0].graphene_type._meta.model
-                    path_from_parent = _get_path_from_parent(fragment_model._meta, parent_model)
-                    select_related_name = LOOKUP_SEP.join(p.join_field.name for p in path_from_parent)
-                    if select_related_name:
-                        fragment_store = self._optimize_gql_selections(
-                            fragment_possible_type,
-                            selection,
-                            # parent_type,
-                        )
-                        store.select_related(select_related_name, fragment_store)
+                    parent_model = self._get_base_model(possible_types)
+                    if parent_model:
+                        path_from_parent = _get_path_from_parent(fragment_model._meta, parent_model)
+                        select_related_name = LOOKUP_SEP.join(p.join_field.name for p in path_from_parent)
+                        if select_related_name:
+                            fragment_store = self._optimize_gql_selections(
+                                fragment_possible_type,
+                                selection,
+                                # parent_type,
+                            )
+                            store.select_related(select_related_name, fragment_store)
             else:
                 name = selection.name.value
                 if isinstance(selection, FragmentSpread):
@@ -328,6 +336,7 @@ def _get_path_from_parent(self, parent):
     chain.append(model)
     # Construct a list of the PathInfos between models in chain.
     path = []
+    import ipdb; ipdb.set_trace()
     for i, ancestor in enumerate(chain[:-1]):
         child = chain[i + 1]
         link = child._meta.get_ancestor_link(ancestor)

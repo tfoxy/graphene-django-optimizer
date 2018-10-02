@@ -64,6 +64,10 @@ class BaseItemType(DjangoObjectType):
         graphene.Field('tests.schema.ItemType'),
         model_field='parent',
     )
+    relay_all_children = gql_optimizer.field(
+        DjangoConnectionField('tests.schema.ItemNode'),
+        model_field='children'
+    )
 
     class Meta:
         model = Item

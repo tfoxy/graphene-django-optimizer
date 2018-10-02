@@ -13,6 +13,7 @@ from graphql.execution.base import (
 from graphql.language.ast import (
     FragmentSpread,
     InlineFragment,
+    Variable
 )
 from graphql.type.definition import (
     GraphQLInterfaceType,
@@ -180,7 +181,17 @@ class QueryOptimizer(object):
             self._get_type(field_def),
             parent_type,
         )
-        args = tuple(arg.value.value for arg in selection.arguments)
+
+        args = []
+        for arg in selection.arguments:
+            if isinstance(arg.value, Variable):
+                var_name = arg.value.name.value
+                value = info.variable_values.get(var_name)
+            else:
+                value = arg.value.value
+            args.append(value)
+        args = tuple(args)
+
         self._add_optimization_hints(
             optimization_hints.select_related(info, *args),
             store.select_list,
@@ -336,7 +347,6 @@ def _get_path_from_parent(self, parent):
     chain.append(model)
     # Construct a list of the PathInfos between models in chain.
     path = []
-    import ipdb; ipdb.set_trace()
     for i, ancestor in enumerate(chain[:-1]):
         child = chain[i + 1]
         link = child._meta.get_ancestor_link(ancestor)

@@ -145,3 +145,28 @@ def test_should_work_fine_with_page_info_field_below_edges_field_when_only_optim
     ''')
     assert not result.errors
     assert result.data['relayItems']['pageInfo']['hasNextPage'] is True
+
+
+@pytest.mark.django_db
+def test_resolve_nested_variables():
+    item_1 = Item.objects.create(id=7, name='foo')
+    item_1.children.create(id=8, name='bar')
+    variables = {'items_first': 1, 'schema_first': 1}
+    result = schema.execute('''
+        query Query($itemsFirst: Int, $childrenFirst: Int) {
+            relayItems(first: $itemsFirst) {
+                edges {
+                    node {
+                        relayAllChildren(first: $childrenFirst) {
+                            edges {
+                                node {
+                                    id
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ''', variables=variables)
+    assert not result.errors

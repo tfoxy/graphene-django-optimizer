@@ -148,12 +148,12 @@ def test_should_work_fine_with_page_info_field_below_edges_field_when_only_optim
 
 
 @pytest.mark.django_db
-def test_resolve_nested_variables():
+def test_should_resolve_nested_variables():
     item_1 = Item.objects.create(id=7, name='foo')
     item_1.children.create(id=8, name='bar')
-    variables = {'items_first': 1, 'schema_first': 1}
+    variables = {'itemsFirst': 1, 'childrenFirst': 1}
     result = schema.execute('''
-        query Query($itemsFirst: Int, $childrenFirst: Int) {
+        query Query($itemsFirst: Int!, $childrenFirst: Int!) {
             relayItems(first: $itemsFirst) {
                 edges {
                     node {
@@ -170,3 +170,8 @@ def test_resolve_nested_variables():
         }
     ''', variables=variables)
     assert not result.errors
+    item_edges = result.data['relayItems']['edges']
+    assert len(item_edges) == 1
+    child_edges = item_edges[0]['node']['relayAllChildren']['edges'][0]
+    assert len(child_edges) == 1
+    assert child_edges['node']['id'] == '8'

@@ -13,7 +13,7 @@ from graphql.execution.base import (
 from graphql.language.ast import (
     FragmentSpread,
     InlineFragment,
-    Variable
+    Variable,
 )
 from graphql.type.definition import (
     GraphQLInterfaceType,

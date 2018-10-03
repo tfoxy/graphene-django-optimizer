@@ -64,13 +64,16 @@ class BaseItemType(DjangoObjectType):
         graphene.Field('tests.schema.ItemType'),
         model_field='parent',
     )
-    relay_all_children = gql_optimizer.field(
-        DjangoConnectionField('tests.schema.ItemNode'),
-        model_field='children'
-    )
+    relay_all_children = DjangoConnectionField('tests.schema.ItemNode')
 
     class Meta:
         model = Item
+
+    @gql_optimizer.resolver_hints(
+        model_field='children',
+    )
+    def resolve_relay_all_children(root, info, **kwargs):
+        return root.children.all()
 
 
 class ItemNode(BaseItemType):

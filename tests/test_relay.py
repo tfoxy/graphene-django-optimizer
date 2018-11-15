@@ -175,3 +175,81 @@ def test_should_resolve_nested_variables():
     child_edges = item_edges[0]['node']['relayAllChildren']['edges'][0]
     assert len(child_edges) == 1
     assert child_edges['node']['id'] == '8'
+
+
+def test_should_optimize_query_when_using_global_id():
+    try:
+        from django.db.models import DEFERRED  # noqa: F401
+    except ImportError:
+        # Query cannot be optimized if DEFERRED is not present.
+        # When the ConnectionField is used, it will throw the following error:
+        # Expected value of type "ItemNode" but got: Item_Deferred_item_id_parent_id.
+        return
+    info = create_resolve_info(schema, '''
+        query {
+            relayItemsGlobalId {
+                edges {
+                    node {
+                        id,
+                        name
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only('id', 'name')
+    assert_query_equality(items, optimized_items)
+
+
+def test_should_optimize_query_when_using_global_uuid():
+    try:
+        from django.db.models import DEFERRED  # noqa: F401
+    except ImportError:
+        # Query cannot be optimized if DEFERRED is not present.
+        # When the ConnectionField is used, it will throw the following error:
+        # Expected value of type "ItemNode" but got: Item_Deferred_item_id_parent_id.
+        return
+    info = create_resolve_info(schema, '''
+        query {
+            relayItemsGlobalUuid {
+                edges {
+                    node {
+                        id,
+                        name
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.QueryOptimizer(info, id_field='uuid').optimize(qs)
+    optimized_items = qs.only('uuid', 'name')
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_verify_should_return_global_uuid():
+    Item.objects.create(id=9, uuid='8ea0da0b-da77-4b11-8fbb-350f59a41854', name='bar')
+
+    # UUID should be used as a global id.
+    result = schema.execute('''
+        query {
+            relayItemsGlobalUuid {
+                edges {
+                    node {
+                        id,
+                        name
+                    }
+                }
+            }
+        }
+    ''')
+
+    # ItemNodeGlobalUUID:8ea0da0b-da77-4b11-8fbb-350f59a41854
+    expected_id = 'SXRlbU5vZGVHbG9iYWxVVUlEOjhlYTBkYTBiLWRhNzctNGIxMS04ZmJiLTM1MGY1OWE0MTg1NA=='
+
+    assert not result.errors
+    assert result.data['relayItemsGlobalUuid']['edges'][0]['node']['id'] == expected_id
+    assert result.data['relayItemsGlobalUuid']['edges'][0]['node']['name'] == 'bar'

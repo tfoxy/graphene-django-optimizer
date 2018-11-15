@@ -82,6 +82,23 @@ class ItemNode(BaseItemType):
         interfaces = (graphene.relay.Node, ItemInterface, )
 
 
+class ItemNodeGlobalID(BaseItemType):
+    class Meta:
+        model = Item
+        only_fields = ('name', )
+        interfaces = (graphene.relay.Node, )
+
+
+class ItemNodeGlobalUUID(BaseItemType):
+    class Meta:
+        model = Item
+        only_fields = ('name', )
+        interfaces = (graphene.relay.Node, )
+
+    def resolve_id(self, info):
+        return self.uuid
+
+
 class ItemType(BaseItemType):
     class Meta:
         model = Item
@@ -119,12 +136,20 @@ class UnrelatedModelType(DjangoObjectType):
 class Query(graphene.ObjectType):
     items = graphene.List(ItemInterface, name=graphene.String(required=True))
     relay_items = DjangoConnectionField(ItemNode)
+    relay_items_global_id = DjangoConnectionField(ItemNodeGlobalID)
+    relay_items_global_uuid = DjangoConnectionField(ItemNodeGlobalUUID)
 
     def resolve_items(root, info, name):
         return gql_optimizer.query(Item.objects.filter(name=name), info)
 
     def resolve_relay_items(root, info, **kwargs):
         return gql_optimizer.query(Item.objects.all(), info)
+
+    def resolve_relay_items_global_id(root, info, **kwargs):
+        return gql_optimizer.query(Item.objects.all(), info)
+
+    def resolve_relay_items_global_uuid(root, info, **kwargs):
+        return gql_optimizer.QueryOptimizer(info, id_field='uuid').optimize(Item.objects.all())
 
 
 schema = graphene.Schema(query=Query, types=(UnrelatedModelType, ))

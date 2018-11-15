@@ -3,6 +3,7 @@ import functools
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import ForeignKey, Prefetch
 from django.db.models.constants import LOOKUP_SEP
+from graphene import GlobalID
 from graphene.types.resolver import attr_resolver
 from graphene_django import DjangoObjectType
 from graphene_django.fields import DjangoListField
@@ -28,8 +29,9 @@ def query(queryset, info):
 
 
 class QueryOptimizer(object):
-    def __init__(self, info):
+    def __init__(self, info, *args, **kwargs):
         self.root_info = info
+        self.id_field = kwargs.get('id_field', 'id')
 
     def optimize(self, queryset):
         info = self.root_info
@@ -237,7 +239,7 @@ class QueryOptimizer(object):
             if name:
                 return name
         if self._is_resolver_for_id_field(resolver):
-            return 'id'
+            return self.id_field
         elif isinstance(resolver, functools.partial):
             resolver_fn = resolver
             if resolver_fn.func == DjangoListField.list_resolver:
@@ -250,6 +252,20 @@ class QueryOptimizer(object):
         # For python 2 unbound method:
         if hasattr(resolve_id, 'im_func'):
             resolve_id = resolve_id.im_func
+
+        if isinstance(resolver, functools.partial):
+            resolver_fn = resolver
+
+            if resolver_fn.func == GlobalID.id_resolver:
+                # This would return False if resolve_id is overriden
+                # by the Type. Instead check for the name of the
+                # function for safety.
+                # if resolver_fn.args:
+                #     return resolver_fn.args[0] == resolve_id
+                
+                if resolver_fn.args:
+                    return resolver_fn.args[0].__name__ == 'resolve_id'
+
         return resolver == resolve_id
 
     def _get_model_field_from_name(self, model, name):

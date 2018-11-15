@@ -1,7 +1,10 @@
+import uuid
+
 from django.db import models
 
 
 class Item(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4)
     name = models.CharField(max_length=100, blank=True)
     parent = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True, related_name='children')
     item = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True)

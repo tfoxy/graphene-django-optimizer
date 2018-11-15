@@ -262,7 +262,7 @@ class QueryOptimizer(object):
                 # function for safety.
                 # if resolver_fn.args:
                 #     return resolver_fn.args[0] == resolve_id
-                
+
                 if resolver_fn.args:
                     return resolver_fn.args[0].__name__ == 'resolve_id'
 

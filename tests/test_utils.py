@@ -26,10 +26,10 @@ class _AssertNumQueriesContext(CaptureQueriesContext):
 
     def __init__(self, num, connection):
         self.num = num
-        super().__init__(connection)
+        super(self, _AssertNumQueriesContext).__init__(connection)
 
     def __exit__(self, exc_type, exc_value, traceback):
-        super().__exit__(exc_type, exc_value, traceback)
+        super(self, _AssertNumQueriesContext).__exit__(exc_type, exc_value, traceback)
         if exc_type is not None:
             return
         executed = len(self)

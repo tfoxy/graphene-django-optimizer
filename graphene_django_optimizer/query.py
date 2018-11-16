@@ -343,8 +343,12 @@ class QueryOptimizerStore():
         self.only_list = None
 
     def optimize_queryset(self, queryset):
-        queryset = queryset.select_related(*self.select_list)
-        queryset = queryset.prefetch_related(*self.prefetch_list)
+        if self.select_related:
+            queryset = queryset.select_related(*self.select_list)
+
+        if self.prefetch_related:
+            queryset = queryset.prefetch_related(*self.prefetch_list)
+
         if self.only_list:
             queryset = queryset.only(*self.only_list)
         return queryset

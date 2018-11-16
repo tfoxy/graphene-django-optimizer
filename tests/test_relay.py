@@ -8,6 +8,7 @@ from .models import (
 )
 from .schema import schema
 from .test_utils import assert_query_equality
+from .test_utils import assert_num_queries
 
 
 @pytest.mark.django_db
@@ -233,19 +234,20 @@ def test_should_optimize_query_when_using_global_uuid():
 def test_verify_should_return_global_uuid():
     Item.objects.create(id=9, uuid='8ea0da0b-da77-4b11-8fbb-350f59a41854', name='bar')
 
-    # UUID should be used as a global id.
-    result = schema.execute('''
-        query {
-            relayItemsGlobalUuid {
-                edges {
-                    node {
-                        id,
-                        name
+    with assert_num_queries(2):
+        # UUID should be used as a global id.
+        result = schema.execute('''
+            query {
+                relayItemsGlobalUuid {
+                    edges {
+                        node {
+                            id,
+                            name
+                        }
                     }
                 }
             }
-        }
-    ''')
+        ''')
 
     # ItemNodeGlobalUUID:8ea0da0b-da77-4b11-8fbb-350f59a41854
     expected_id = 'SXRlbU5vZGVHbG9iYWxVVUlEOjhlYTBkYTBiLWRhNzctNGIxMS04ZmJiLTM1MGY1OWE0MTg1NA=='

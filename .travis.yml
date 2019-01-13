@@ -8,17 +8,17 @@ env:
   - DJANGO_VERSION=1.8.19
   - DJANGO_VERSION=1.9.13
   - DJANGO_VERSION=1.10.8
-  - DJANGO_VERSION=1.11.15
-  - DJANGO_VERSION=2.0.8
-  - DJANGO_VERSION=2.1
+  - DJANGO_VERSION=1.11.18
+  - DJANGO_VERSION=2.0.10
+  - DJANGO_VERSION=2.1.5
 matrix:
   exclude:
   - python: 2.7
-    env: DJANGO_VERSION=2.0.8
+    env: DJANGO_VERSION=2.0.10
   - python: 2.7
-    env: DJANGO_VERSION=2.1
+    env: DJANGO_VERSION=2.1.5
   - python: 3.4
-    env: DJANGO_VERSION=2.1
+    env: DJANGO_VERSION=2.1.5
 install:
   - pip install -r dev-env-requirements.txt
   - pip install django==$DJANGO_VERSION

@@ -118,8 +118,8 @@ class QueryOptimizer(object):
                         graphene_type = possible_type.graphene_type
                         # Check if graphene type is a relay connection or a relay edge
                         if hasattr(graphene_type._meta, 'node') or (
-                            hasattr(graphene_type, 'cursor') and
-                            hasattr(graphene_type, 'node')
+                            hasattr(graphene_type, 'cursor')
+                            and hasattr(graphene_type, 'node')
                         ):
                             relay_store = self._optimize_gql_selections(
                                 self._get_type(selection_field_def),
@@ -264,9 +264,9 @@ class QueryOptimizer(object):
 
     def _is_foreign_key_id(self, model_field, name):
         return (
-            isinstance(model_field, ForeignKey) and
-            model_field.name != name and
-            model_field.get_attname() == name
+            isinstance(model_field, ForeignKey)
+            and model_field.name != name
+            and model_field.get_attname() == name
         )
 
     def _create_resolve_info(self, field_name, field_asts, return_type, parent_type):

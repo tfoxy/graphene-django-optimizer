@@ -104,3 +104,81 @@ categories = (
     ))
 )
 ```
+
+
+## Advanced usage
+
+Sometimes we need to have a custom resolver function. In those cases, the field can't be auto optimized.
+So we need to use `gql_optimizer.resolver_hints` decorator to indicate the optimizations.
+
+If the resolver returns a model field, we can use the `model_field` argument:
+
+```py
+import graphene
+from graphene_django.types import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
+
+
+class ItemType(DjangoObjectType):
+    product = graphene.Field('ProductType')
+
+    @gql_optimizer.resolver_hints(
+        model_field='product',
+    )
+    def resolve_product(root, info):
+        # check if user have permission for seeing the product
+        if info.context.user.is_anonymous():
+            return None
+        return root.product
+```
+
+This will automatically optimize any subfield of `product`.
+
+Now, if the resolver uses related fields, you can use the `select_related` argument:
+
+```py
+import graphene
+from graphene_django.types import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
+
+
+class ItemType(DjangoObjectType):
+    name = graphene.String()
+
+    @gql_optimizer.resolver_hints(
+        select_related=('product', 'shipping'),
+        only=('product__name', 'shipping__name'),
+    )
+    def resolve_name(root, info):
+        return '{} {}'.format(root.product.name, root.shipping.name)
+```
+
+Finally, if your field has an argument for filtering results,
+you can use the `prefetch_related` argument with a function
+that returns a `Prefetch` instance as the value.
+
+```py
+from django.db.models import Prefetch
+import graphene
+from graphene_django.types import DjangoObjectType
+import graphene_django_optimizer as gql_optimizer
+
+
+class CartType(DjangoObjectType):
+    items = graphene.List(
+        'ItemType',
+        product_id=graphene.ID(),
+    )
+
+    @gql_optimizer.resolver_hints(
+        prefetch_related=lambda info, product_id: Prefetch(
+            'items',
+            queryset=gql_optimizer.query(Item.objects.filter(product_id=product_id), info),
+            to_attr='gql_product_id_' + product_id,
+        ),
+    )
+    def resolve_items(root, info, product_id):
+        return getattr(root, 'gql_product_id_' + product_id)
+```
+
+With these hints, any field can be optimized.

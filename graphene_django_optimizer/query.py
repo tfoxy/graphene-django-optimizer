@@ -315,7 +315,11 @@ class QueryOptimizerStore():
             self.prefetch_list.append(Prefetch(name, queryset=queryset))
         elif store.prefetch_list:
             for prefetch in store.prefetch_list:
-                self.prefetch_list.append(name + LOOKUP_SEP + prefetch)
+                if isinstance(prefetch, Prefetch):
+                    prefetch.add_prefix(name)
+                else:
+                    prefetch = name + LOOKUP_SEP + prefetch
+                self.prefetch_list.append(prefetch)
         else:
             self.prefetch_list.append(name)
 

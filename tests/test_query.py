@@ -415,3 +415,26 @@ def test_should_fetch_field_inside_interface_fragment():
         .only('id', 'detaileditem__detail')
     )
     assert_query_equality(items, optimized_items)
+
+
+def test_should_use_nested_prefetch_related_while_also_selecting_only_required_fields():
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                children {
+                    children {
+                        id
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.prefetch_related(
+        Prefetch(
+            'children',
+            queryset=Item.objects.only('id'),
+        ),
+    )
+    assert_query_equality(items, optimized_items)

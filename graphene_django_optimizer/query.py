@@ -331,10 +331,15 @@ class QueryOptimizerStore():
         self.only_list = None
 
     def optimize_queryset(self, queryset):
-        queryset = queryset.select_related(*self.select_list)
-        queryset = queryset.prefetch_related(*self.prefetch_list)
+        if self.select_list:
+            queryset = queryset.select_related(*self.select_list)
+
+        if self.prefetch_list:
+            queryset = queryset.prefetch_related(*self.prefetch_list)
+
         if self.only_list:
             queryset = queryset.only(*self.only_list)
+
         return queryset
 
     def append(self, store):

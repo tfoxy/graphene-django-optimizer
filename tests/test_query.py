@@ -439,6 +439,7 @@ def test_should_use_nested_prefetch_related_while_also_selecting_only_required_f
     )
     assert_query_equality(items, optimized_items)
 
+
 # @pytest.mark.django_db
 def test_should_only_use_the_only_and_not_select_related():
     info = create_resolve_info(schema, '''

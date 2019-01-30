@@ -1,5 +1,6 @@
 import functools
 
+from django.db.models.fields.reverse_related import ManyToOneRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import ForeignKey, Prefetch
 from django.db.models.constants import LOOKUP_SEP
@@ -196,6 +197,10 @@ class QueryOptimizer(object):
                 selection,
                 # parent_type,
             )
+
+            if isinstance(model_field, ManyToOneRel):
+                field_store.only(model_field.field.name)
+
             related_queryset = model_field.related_model.objects.all()
             store.prefetch_related(name, field_store, related_queryset)
             return True

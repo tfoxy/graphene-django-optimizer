@@ -29,6 +29,11 @@ class RelatedItem(Item):
     related_items = models.ManyToManyField(Item)
 
 
+class RelatedOneToManyItem(models.Model):
+    name = models.CharField(max_length=100, blank=True)
+    item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name='otm_items')
+
+
 class ExtraDetailedItem(DetailedItem):
     extra_detail = models.TextField()
 

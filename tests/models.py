@@ -35,3 +35,12 @@ class ExtraDetailedItem(DetailedItem):
 
 class UnrelatedModel(models.Model):
     detail = models.TextField(null=True)
+
+
+class SomeOtherItem(models.Model):
+    name = models.CharField(max_length=100, blank=True)
+
+
+class OtherItem(models.Model):
+    name = models.CharField(max_length=100, blank=True)
+    some_other_item = models.ForeignKey('SomeOtherItem', on_delete=models.PROTECT, null=False)

@@ -5,7 +5,7 @@ import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
 from .models import (
-    Item,
+    Item, OtherItem
 )
 from .schema import schema
 from .test_utils import assert_query_equality
@@ -437,4 +437,20 @@ def test_should_use_nested_prefetch_related_while_also_selecting_only_required_f
             queryset=Item.objects.only('id'),
         ),
     )
+    assert_query_equality(items, optimized_items)
+
+# @pytest.mark.django_db
+def test_should_only_use_the_only_and_not_select_related():
+    info = create_resolve_info(schema, '''
+        query {
+            otherItems {
+                id
+                name
+            }
+        }
+    ''')
+    qs = OtherItem.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only('id', 'name')
+    # from IPython import embed; embed()
     assert_query_equality(items, optimized_items)

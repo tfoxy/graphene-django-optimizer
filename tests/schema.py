@@ -10,6 +10,8 @@ from .models import (
     Item,
     RelatedItem,
     UnrelatedModel,
+    SomeOtherItem,
+    OtherItem,
 )
 
 
@@ -82,6 +84,16 @@ class ItemNode(BaseItemType):
         interfaces = (graphene.relay.Node, ItemInterface, )
 
 
+class SomeOtherItemType(DjangoObjectType):
+    class Meta:
+        model = SomeOtherItem
+
+
+class OtherItemType(DjangoObjectType):
+    class Meta:
+        model = OtherItem
+
+
 class ItemType(BaseItemType):
     class Meta:
         model = Item
@@ -119,12 +131,16 @@ class UnrelatedModelType(DjangoObjectType):
 class Query(graphene.ObjectType):
     items = graphene.List(ItemInterface, name=graphene.String(required=True))
     relay_items = DjangoConnectionField(ItemNode)
+    other_items = graphene.List(OtherItemType)
 
     def resolve_items(root, info, name):
         return gql_optimizer.query(Item.objects.filter(name=name), info)
 
     def resolve_relay_items(root, info, **kwargs):
         return gql_optimizer.query(Item.objects.all(), info)
+
+    def resolve_other_items(root, info):
+        return gql_optimizer.query(OtherItemType.objects.all(), info)
 
 
 schema = graphene.Schema(query=Query, types=(UnrelatedModelType, ))

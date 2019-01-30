@@ -12,6 +12,7 @@ from .models import (
     UnrelatedModel,
     SomeOtherItem,
     OtherItem,
+    RelatedOneToManyItem,
 )
 
 
@@ -120,6 +121,11 @@ class ExtraDetailedItemType(DetailedItemType):
     class Meta:
         model = ExtraDetailedItem
         interfaces = (ItemInterface, )
+
+
+class RelatedOneToManyItemType(DjangoObjectType):
+    class Meta:
+        model = RelatedOneToManyItem
 
 
 class UnrelatedModelType(DjangoObjectType):

@@ -468,5 +468,4 @@ def test_should_only_use_the_only_and_not_select_related():
     qs = OtherItem.objects.all()
     items = gql_optimizer.query(qs, info)
     optimized_items = qs.only('id', 'name')
-    # from IPython import embed; embed()
     assert_query_equality(items, optimized_items)

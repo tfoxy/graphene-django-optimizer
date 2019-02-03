@@ -182,3 +182,28 @@ class CartType(DjangoObjectType):
 ```
 
 With these hints, any field can be optimized.
+
+
+### Optimize with non model fields
+
+Sometimes we need to have a custom non model fields. In those cases, the optimizer would not optimize with the Django `.only()` method.
+So if we still want to optimize with the `.only()` method, we need to use `disable_abort_only` option:
+
+```py
+
+class IngredientType(DjangoObjectType):
+    calculated_calories = graphene.String()
+
+    class Meta:
+        model = Ingredient
+    
+    def resolve_calculated_calories(root, info):
+        return get_calories_for_ingredient(root.id)
+
+
+class Query(object):
+    all_ingredients = graphene.List(IngredientType)
+
+    def resolve_all_ingredients(root, info):
+        return gql_optimizer.query(Ingredient.objects.all(), info, disable_abort_only=True)
+```

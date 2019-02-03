@@ -123,6 +123,22 @@ def test_should_not_try_to_optimize_non_field_model_fields():
     assert_query_equality(items, optimized_items)
 
 
+def test_should_try_to_optimize_non_field_model_fields_when_disabling_abort_only():
+    # Item.objects.create(name='foo')
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                unoptimizedTitle
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info, disable_abort_only=True)
+    optimized_items = qs.only('id')
+    assert_query_equality(items, optimized_items)
+
+
 # @pytest.mark.django_db
 def test_should_optimize_when_using_fragments():
     # parent = Item.objects.create(name='foo')

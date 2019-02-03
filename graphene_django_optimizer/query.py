@@ -23,13 +23,29 @@ from graphql.type.definition import (
 from .utils import is_iterable
 
 
-def query(queryset, info):
-    return QueryOptimizer(info).optimize(queryset)
+def query(queryset, info, **options):
+    """
+    Automatically optimize queries.
+
+    Arguments:
+        - queryset (Django QuerySet object) - The queryset to be optimized
+        - info (GraphQL ResolveInfo object) - This is passed by the graphene-django resolve methods
+        - **options - optimization options/settings
+            - disable_abort_only (boolean) - in case the objecttype contains any extra fields,
+                                             then this will keep the "only" optimization enabled.
+    """
+
+    return QueryOptimizer(info, **options).optimize(queryset)
 
 
 class QueryOptimizer(object):
-    def __init__(self, info):
+    """
+    Automatically optimize queries.
+    """
+
+    def __init__(self, info, **options):
         self.root_info = info
+        self.disable_abort_only = options.pop('disable_abort_only', False)
 
     def optimize(self, queryset):
         info = self.root_info
@@ -93,7 +109,10 @@ class QueryOptimizer(object):
         store.append(fragment_store)
 
     def _optimize_gql_selections(self, field_type, field_ast):
-        store = QueryOptimizerStore()
+        store = QueryOptimizerStore(
+            disable_abort_only=self.disable_abort_only,
+        )
+
         selection_set = field_ast.selection_set
         if not selection_set:
             return store
@@ -285,10 +304,11 @@ class QueryOptimizer(object):
 
 
 class QueryOptimizerStore():
-    def __init__(self):
+    def __init__(self, disable_abort_only=False):
         self.select_list = []
         self.prefetch_list = []
         self.only_list = []
+        self.disable_abort_only = disable_abort_only
 
     def select_related(self, name, store):
         if store.select_list:
@@ -328,7 +348,8 @@ class QueryOptimizerStore():
             self.only_list.append(field)
 
     def abort_only_optimization(self):
-        self.only_list = None
+        if not self.disable_abort_only:
+            self.only_list = None
 
     def optimize_queryset(self, queryset):
         queryset = queryset.select_related(*self.select_list)

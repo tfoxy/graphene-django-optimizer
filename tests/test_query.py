@@ -481,7 +481,7 @@ def test_should_check_reverse_relations_add_foreign_key():
     optimized_items = qs.prefetch_related(
         Prefetch(
             'otm_items',
-            queryset=RelatedOneToManyItem.objects.only('id', 'item_id'),
+            queryset=RelatedOneToManyItem.objects.select_related('item').only('id', 'item_id', 'item__id', 'item__name', 'item__parent_id', 'item__item_id'),
         ),
     )
     assert_query_equality(items, optimized_items)

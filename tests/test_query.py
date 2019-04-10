@@ -7,7 +7,10 @@ import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
 from .models import (
-    Item, RelatedOneToManyItem
+    Item,
+    RelatedOneToManyItem,
+    Item,
+    OtherItem,
 )
 from .schema import schema
 from .test_utils import assert_query_equality
@@ -122,6 +125,22 @@ def test_should_not_try_to_optimize_non_field_model_fields():
     qs = Item.objects.filter(name='foo')
     items = gql_optimizer.query(qs, info)
     optimized_items = qs
+    assert_query_equality(items, optimized_items)
+
+
+def test_should_try_to_optimize_non_field_model_fields_when_disabling_abort_only():
+    # Item.objects.create(name='foo')
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                unoptimizedTitle
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info, disable_abort_only=True)
+    optimized_items = qs.only('id')
     assert_query_equality(items, optimized_items)
 
 
@@ -478,3 +497,18 @@ def test_should_check_reverse_relations_add_foreign_key():
 
     assert len(optimized_query_capture.captured_queries) == 2
     assert len(expected_query_capture) == len(optimized_query_capture)
+
+# @pytest.mark.django_db
+def test_should_only_use_the_only_and_not_select_related():
+    info = create_resolve_info(schema, '''
+        query {
+            otherItems {
+                id
+                name
+            }
+        }
+    ''')
+    qs = OtherItem.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only('id', 'name')
+    assert_query_equality(items, optimized_items)

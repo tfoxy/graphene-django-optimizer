@@ -27,7 +27,12 @@ def test_should_optimize_non_django_field_if_it_has_an_optimization_hint_in_the_
     ''')
     qs = Item.objects.filter(name='foo')
     items = gql_optimizer.query(qs, info)
-    optimized_items = qs.prefetch_related('children')
+    optimized_items = qs.prefetch_related(
+        Prefetch(
+            'children',
+            queryset=Item.objects.only('id', 'parent_id'),
+        ),
+    )
     assert_query_equality(items, optimized_items)
 
 

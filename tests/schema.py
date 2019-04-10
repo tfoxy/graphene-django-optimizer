@@ -13,6 +13,7 @@ from .models import (
     RelatedOneToManyItem,
     SomeOtherItem,
     OtherItem,
+    RelatedOneToManyItem,
 )
 
 

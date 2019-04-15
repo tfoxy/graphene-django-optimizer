@@ -1,8 +1,8 @@
 from django.db.models import Prefetch
 import graphene
 from graphene_django.fields import DjangoConnectionField
-from graphene_django.types import DjangoObjectType
 import graphene_django_optimizer as gql_optimizer
+from graphene_django_optimizer import OptimizedDjangoObjectType
 
 from .models import (
     DetailedItem,
@@ -58,7 +58,7 @@ class ItemInterface(graphene.Interface):
         return getattr(root, 'gql_filtered_children_' + name)
 
 
-class BaseItemType(DjangoObjectType):
+class BaseItemType(OptimizedDjangoObjectType):
     title = gql_optimizer.field(
         graphene.String(),
         only='name',
@@ -85,12 +85,12 @@ class ItemNode(BaseItemType):
         interfaces = (graphene.relay.Node, ItemInterface, )
 
 
-class SomeOtherItemType(DjangoObjectType):
+class SomeOtherItemType(OptimizedDjangoObjectType):
     class Meta:
         model = SomeOtherItem
 
 
-class OtherItemType(DjangoObjectType):
+class OtherItemType(OptimizedDjangoObjectType):
     class Meta:
         model = OtherItem
 
@@ -123,12 +123,12 @@ class ExtraDetailedItemType(DetailedItemType):
         interfaces = (ItemInterface, )
 
 
-class RelatedOneToManyItemType(DjangoObjectType):
+class RelatedOneToManyItemType(OptimizedDjangoObjectType):
     class Meta:
         model = RelatedOneToManyItem
 
 
-class UnrelatedModelType(DjangoObjectType):
+class UnrelatedModelType(OptimizedDjangoObjectType):
     class Meta:
         model = UnrelatedModel
         interfaces = (DetailedInterface, )

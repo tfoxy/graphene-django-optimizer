@@ -7,7 +7,7 @@ class OptimizedDjangoObjectType(DjangoObjectType):
         abstract = True
 
     @classmethod
-    def optimize_node(cls, info, qs, pk):
+    def get_optimized_node(cls, info, qs, pk):
         try:
             return query(qs, info).get(pk=pk)
         except cls._meta.model.DoesNotExist:
@@ -15,4 +15,4 @@ class OptimizedDjangoObjectType(DjangoObjectType):
 
     @classmethod
     def get_node(cls, info, id):
-        return cls.optimize_node(info, cls._meta.model.objects, id)
+        return cls.get_optimized_node(info, cls._meta.model.objects, id)

@@ -115,11 +115,10 @@ If the resolver returns a model field, we can use the `model_field` argument:
 
 ```py
 import graphene
-from graphene_django.types import DjangoObjectType
 import graphene_django_optimizer as gql_optimizer
 
 
-class ItemType(DjangoObjectType):
+class ItemType(gql_optimizer.OptimizedDjangoObjectType):
     product = graphene.Field('ProductType')
 
     @gql_optimizer.resolver_hints(
@@ -138,11 +137,10 @@ Now, if the resolver uses related fields, you can use the `select_related` argum
 
 ```py
 import graphene
-from graphene_django.types import DjangoObjectType
 import graphene_django_optimizer as gql_optimizer
 
 
-class ItemType(DjangoObjectType):
+class ItemType(gql_optimizer.OptimizedDjangoObjectType):
     name = graphene.String()
 
     @gql_optimizer.resolver_hints(
@@ -153,6 +151,9 @@ class ItemType(DjangoObjectType):
         return '{} {}'.format(root.product.name, root.shipping.name)
 ```
 
+Notice the usage of the type `OptimizedDjangoObjectType`, which enables
+optimization of any single node queries.
+
 Finally, if your field has an argument for filtering results,
 you can use the `prefetch_related` argument with a function
 that returns a `Prefetch` instance as the value.
@@ -160,11 +161,10 @@ that returns a `Prefetch` instance as the value.
 ```py
 from django.db.models import Prefetch
 import graphene
-from graphene_django.types import DjangoObjectType
 import graphene_django_optimizer as gql_optimizer
 
 
-class CartType(DjangoObjectType):
+class CartType(gql_optimizer.OptimizedDjangoObjectType):
     items = graphene.List(
         'ItemType',
         product_id=graphene.ID(),
@@ -191,7 +191,7 @@ So if we still want to optimize with the `.only()` method, we need to use `disab
 
 ```py
 
-class IngredientType(DjangoObjectType):
+class IngredientType(gql_optimizer.OptimizedDjangoObjectType):
     calculated_calories = graphene.String()
 
     class Meta:

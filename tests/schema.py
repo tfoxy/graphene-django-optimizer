@@ -134,10 +134,27 @@ class UnrelatedModelType(OptimizedDjangoObjectType):
         interfaces = (DetailedInterface, )
 
 
+class DummyItemMutation(graphene.Mutation):
+    item = graphene.Field(
+        ItemType, description='The retrieved item.', required=False)
+
+    class Arguments:
+        item_id = graphene.ID(description='The ID of the item.')
+
+    class Meta:
+        description = 'A dummy mutation that retrieves a given item node.'
+
+    @staticmethod
+    def mutate(info, item_id):
+        return graphene.Node.get_node_from_global_id(
+            info, item_id, only_type=ItemType)
+
+
 class Query(graphene.ObjectType):
     items = graphene.List(ItemInterface, name=graphene.String(required=True))
     relay_items = DjangoConnectionField(ItemNode)
     other_items = graphene.List(OtherItemType)
+    some_other_items = graphene.List(SomeOtherItemType)
 
     def resolve_items(root, info, name):
         return gql_optimizer.query(Item.objects.filter(name=name), info)
@@ -149,4 +166,5 @@ class Query(graphene.ObjectType):
         return gql_optimizer.query(OtherItemType.objects.all(), info)
 
 
-schema = graphene.Schema(query=Query, types=(UnrelatedModelType, ))
+schema = graphene.Schema(
+    query=Query, types=(UnrelatedModelType, ), mutation=DummyItemMutation)

@@ -52,11 +52,11 @@ def test_should_return_none_when_node_is_not_resolved(mocked_optimizer):
     ''')
 
     info.return_type = schema.get_type('SomeOtherItemType')
-    qs = SomeOtherItem.objects.filter(name='foo')
+    qs = SomeOtherItem.objects
     mocked_optimizer.return_value = qs
 
-    assert SomeOtherItemType.get_optimized_node(info, qs, 7) is None
-    mocked_optimizer.assert_called_once_with(qs, info)
+    assert SomeOtherItemType.get_node(info, 8) is None
+    mocked_optimizer.assert_called_once_with(SomeOtherItem.objects, info)
 
 
 @patch('graphene_django_optimizer.types.query')

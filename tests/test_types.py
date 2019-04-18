@@ -1,8 +1,9 @@
 import pytest
+from graphql_relay import to_global_id
 from mock import patch
 
 from .graphql_utils import create_resolve_info
-from .models import SomeOtherItem
+from .models import SomeOtherItem, Item
 from .schema import schema, SomeOtherItemType, DummyItemMutation
 
 
@@ -59,8 +60,10 @@ def test_should_return_none_when_node_is_not_resolved(mocked_optimizer):
     mocked_optimizer.assert_called_once_with(SomeOtherItem.objects, info)
 
 
+@pytest.mark.django_db
 @patch('graphene_django_optimizer.types.query')
 def test_mutating_should_not_optimize(mocked_optimizer):
+    Item.objects.create(id=7)
 
     info = create_resolve_info(schema, '''
         query {
@@ -75,6 +78,8 @@ def test_mutating_should_not_optimize(mocked_optimizer):
         }
     ''')
 
-    info.return_type = schema.get_type('ItemType')
-    DummyItemMutation.mutate(info, 7)
+    info.return_type = schema.get_type('SomeOtherItemType')
+    result = DummyItemMutation.mutate(info, to_global_id('ItemNode', 7))
+    assert result
+    assert result.pk == 7
     assert mocked_optimizer.call_count == 0

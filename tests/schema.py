@@ -136,7 +136,7 @@ class UnrelatedModelType(OptimizedDjangoObjectType):
 
 class DummyItemMutation(graphene.Mutation):
     item = graphene.Field(
-        ItemType, description='The retrieved item.', required=False)
+        ItemNode, description='The retrieved item.', required=False)
 
     class Arguments:
         item_id = graphene.ID(description='The ID of the item.')
@@ -147,7 +147,7 @@ class DummyItemMutation(graphene.Mutation):
     @staticmethod
     def mutate(info, item_id):
         return graphene.Node.get_node_from_global_id(
-            info, item_id, only_type=ItemType)
+            info, item_id, only_type=ItemNode)
 
 
 class Query(graphene.ObjectType):

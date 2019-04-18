@@ -29,4 +29,15 @@ class OptimizedDjangoObjectType(DjangoObjectType):
 
     @classmethod
     def get_node(cls, info, id):
+        """
+        Bear in mind that if you are overriding this method get_node(info, pk),
+        you should always call maybe_optimize(info, qs, pk)
+        and never directly call get_optimized_node(info, qs, pk) as it would
+        result to the node being attempted to be optimized when it is not
+        supposed to actually get optimized.
+
+        :param info:
+        :param id:
+        :return:
+        """
         return cls.maybe_optimize(info, cls._meta.model.objects, id)

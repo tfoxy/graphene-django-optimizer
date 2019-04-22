@@ -506,47 +506,6 @@ def test_should_check_reverse_relations_add_foreign_key():
     assert len(expected_query_capture) == len(optimized_query_capture)
 
 
-@pytest.mark.django_db
-def test_should_check_reverse_relations_add_foreign_key():
-    info = create_resolve_info(schema, '''
-        query {
-            items {
-                otmItems {
-                    id
-                }
-            }
-        }
-    ''')
-    qs = Item.objects.all()
-    items = gql_optimizer.query(qs, info)
-    optimized_items = qs.prefetch_related(
-        Prefetch(
-            'otm_items',
-            queryset=RelatedOneToManyItem.objects.only('id', 'item_id'),
-        ),
-    )
-    assert_query_equality(items, optimized_items)
-
-    # When the query is not optimized, there will be an additional queries
-    for i in range(3):
-        the_item = Item.objects.create(name='foo')
-        for k in range(3):
-            RelatedOneToManyItem.objects.create(name='bar{}{}'.format(i, k), item=the_item)
-
-    with CaptureQueriesContext(connection) as expected_query_capture:
-        for i in items:
-            for k in i.otm_items.all():
-                pass
-
-    with CaptureQueriesContext(connection) as optimized_query_capture:
-        for i in optimized_items:
-            for k in i.otm_items.all():
-                pass
-
-    assert len(optimized_query_capture.captured_queries) == 2
-    assert len(expected_query_capture) == len(optimized_query_capture)
-
-
 # @pytest.mark.django_db
 def test_should_only_use_the_only_and_not_select_related():
     info = create_resolve_info(schema, '''

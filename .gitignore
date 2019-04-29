@@ -3,6 +3,7 @@ venv2/
 venv3/
 *.pyc
 .vscode/
+.idea/
 *.egg-info/
 .eggs/
 .pytest_cache/
@@ -10,4 +11,3 @@ dist/
 build/
 .coverage
 htmlcov/
-.*/

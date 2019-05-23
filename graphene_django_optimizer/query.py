@@ -15,7 +15,7 @@ from graphql.language.ast import (
     FragmentSpread,
     InlineFragment,
     Variable,
-)
+    ObjectValue)
 from graphql.type.definition import (
     GraphQLInterfaceType,
     GraphQLUnionType,
@@ -212,6 +212,18 @@ class QueryOptimizer(object):
     def _get_optimization_hints(self, resolver):
         return getattr(resolver, 'optimization_hints', None)
 
+    def _get_value(self, info, value):
+        if isinstance(value, Variable):
+            var_name = value.name.value
+            value = info.variable_values.get(var_name)
+        if isinstance(value, ObjectValue):
+            value = {
+                field.name.value:
+                    self._get_value(info, field.value) for field in value.fields}
+        else:
+            value = value.value
+        return value
+
     def _optimize_field_by_hints(self, store, selection, field_def, parent_type):
         optimization_hints = self._get_optimization_hints(field_def.resolver)
         if not optimization_hints:
@@ -225,12 +237,7 @@ class QueryOptimizer(object):
 
         args = []
         for arg in selection.arguments:
-            if isinstance(arg.value, Variable):
-                var_name = arg.value.name.value
-                value = info.variable_values.get(var_name)
-            else:
-                value = arg.value.value
-            args.append(value)
+            args.append(self._get_value(info, arg.value))
         args = tuple(args)
 
         self._add_optimization_hints(

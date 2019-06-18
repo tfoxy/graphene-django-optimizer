@@ -9,22 +9,22 @@ python:
 env:
   - DJANGO_VERSION=1.9.13
   - DJANGO_VERSION=1.10.8
-  - DJANGO_VERSION=1.11.20
+  - DJANGO_VERSION=1.11.21
   - DJANGO_VERSION=2.0.13
-  - DJANGO_VERSION=2.1.8
-  - DJANGO_VERSION=2.2
+  - DJANGO_VERSION=2.1.9
+  - DJANGO_VERSION=2.2.2
 matrix:
   exclude:
   - python: 2.7
     env: DJANGO_VERSION=2.0.13
   - python: 2.7
-    env: DJANGO_VERSION=2.1.8
+    env: DJANGO_VERSION=2.1.9
   - python: 3.4
-    env: DJANGO_VERSION=2.1.8
+    env: DJANGO_VERSION=2.1.9
   - python: 2.7
-    env: DJANGO_VERSION=2.2
+    env: DJANGO_VERSION=2.2.2
   - python: 3.4
-    env: DJANGO_VERSION=2.2
+    env: DJANGO_VERSION=2.2.2
 install:
   - pip install -r dev-env-requirements.txt
   - pip install django==$DJANGO_VERSION

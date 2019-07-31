@@ -1,5 +1,6 @@
 from django.db.models import Prefetch
 import graphene
+from graphene import ConnectionField
 from graphene_django.fields import DjangoConnectionField
 import graphene_django_optimizer as gql_optimizer
 from graphene_django_optimizer import OptimizedDjangoObjectType
@@ -16,6 +17,14 @@ from .models import (
 )
 
 
+class RangeInput(graphene.InputObjectType):
+    gte = graphene.Field(graphene.Int)
+
+
+class ItemFilterInput(graphene.InputObjectType):
+    value = graphene.Field(RangeInput)
+
+
 class ItemInterface(graphene.Interface):
     id = graphene.ID(required=True)
     parent_id = graphene.ID()
@@ -30,6 +39,16 @@ class ItemInterface(graphene.Interface):
     filtered_children = graphene.List(
         'tests.schema.ItemType',
         name=graphene.String(required=True),
+    )
+    children_custom_filtered = gql_optimizer.field(
+        ConnectionField('tests.schema.ItemConnection', filter_input=ItemFilterInput()),
+        prefetch_related=lambda info, filter_input: Prefetch(
+            'children',
+            queryset=gql_optimizer.query(
+                Item.objects.filter(
+                    value__gte=int(filter_input.get('value', {}).get('gte', 0))), info),
+            to_attr='gql_custom_filtered_children',
+        ),
     )
 
     def resolve_foo(root, info):
@@ -56,6 +75,9 @@ class ItemInterface(graphene.Interface):
     )
     def resolve_filtered_children(root, info, name):
         return getattr(root, 'gql_filtered_children_' + name)
+
+    def resolve_children_custom_filtered(root, info, *_args):
+        return getattr(root, 'gql_custom_filtered_children')
 
 
 class BaseItemType(OptimizedDjangoObjectType):
@@ -99,6 +121,11 @@ class ItemType(BaseItemType):
     class Meta:
         model = Item
         interfaces = (ItemInterface, )
+
+
+class ItemConnection(graphene.relay.Connection):
+    class Meta:
+        node = ItemType
 
 
 class DetailedInterface(graphene.Interface):

@@ -5,6 +5,7 @@ class Item(models.Model):
     name = models.CharField(max_length=100, blank=True)
     parent = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True, related_name='children')
     item = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True)
+    value = models.IntegerField(default=10)
 
     item_type = 'simple'
 

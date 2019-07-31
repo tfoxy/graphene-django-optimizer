@@ -85,6 +85,31 @@ def test_should_optimize_with_prefetch_related_as_a_function():
     assert_query_equality(items, optimized_items)
 
 
+def test_should_optimize_with_prefetch_related_as_a_function_with_object_input():
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                foo
+                childrenCustomFiltered(filterInput: {value: {gte: 11}}) {
+                    id
+                    value
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(value__gte=11)
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.prefetch_related(
+        Prefetch(
+            'children',
+            queryset=Item.objects.filter(value__gte=11),
+            to_attr='gql_custom_filtered_children',
+        ),
+    )
+    assert_query_equality(items, optimized_items)
+
+
 @pytest.mark.django_db
 def test_should_return_valid_result_with_prefetch_related_as_a_function():
     parent = Item.objects.create(id=1, name='foo')

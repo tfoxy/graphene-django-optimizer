@@ -56,7 +56,6 @@ def test_should_optimize_with_prefetch_related_as_a_string():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
 def test_should_optimize_with_prefetch_related_as_a_function():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -85,28 +84,49 @@ def test_should_optimize_with_prefetch_related_as_a_function():
     assert_query_equality(items, optimized_items)
 
 
-def test_should_optimize_with_prefetch_related_as_a_function_with_object_input():
-    info = create_resolve_info(schema, '''
-        query {
-            items(name: "foo") {
-                id
-                foo
-                childrenCustomFiltered(filterInput: {value: {gte: 11}}) {
-                    id
-                    value
+QUERY_CONNECTION_NESTED_INPUT_OBJECT = '''
+    query($filters: ItemFilterInput) {
+        items(name: "foo") {
+            id
+            foo
+            childrenCustomFiltered(filterInput: $filters) {
+                edges {
+                    node {
+                        id
+                        value
+                    }
                 }
             }
         }
-    ''')
-    qs = Item.objects.filter(value__gte=11)
-    items = gql_optimizer.query(qs, info)
-    optimized_items = qs.prefetch_related(
+    }
+'''
+
+
+@pytest.mark.parametrize("variables, expected_gte", [
+    ({"filters": {'value': {'gte': 11}}}, 11),
+    ({}, 0),
+])
+@pytest.mark.django_db
+def test_should_optimize_with_prefetch_related_as_a_function_with_object_input(
+    variables, expected_gte
+):
+    """This test attempt to provide a nested object as a variable and a null value
+    as a filter. The objective is to ensure null and nested objects are properly
+    resolved.
+    """
+
+    query = QUERY_CONNECTION_NESTED_INPUT_OBJECT
+    info = create_resolve_info(schema, query, variables=variables)
+
+    optimized_items = Item.objects.prefetch_related(
         Prefetch(
             'children',
-            queryset=Item.objects.filter(value__gte=11),
+            queryset=Item.objects.only('id', 'value').filter(value__gte=expected_gte),
             to_attr='gql_custom_filtered_children',
         ),
     )
+
+    items = gql_optimizer.query(Item.objects, info)
     assert_query_equality(items, optimized_items)
 
 

@@ -4,6 +4,8 @@ from django.db.models.fields.reverse_related import ManyToOneRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import ForeignKey, Prefetch
 from django.db.models.constants import LOOKUP_SEP
+from graphene import InputObjectType
+from graphene.types.generic import GenericScalar
 from graphene.types.resolver import default_resolver
 from graphene_django import DjangoObjectType
 from graphene_django.fields import DjangoListField
@@ -15,7 +17,7 @@ from graphql.language.ast import (
     FragmentSpread,
     InlineFragment,
     Variable,
-    ObjectValue)
+)
 from graphql.type.definition import (
     GraphQLInterfaceType,
     GraphQLUnionType,
@@ -216,12 +218,10 @@ class QueryOptimizer(object):
         if isinstance(value, Variable):
             var_name = value.name.value
             value = info.variable_values.get(var_name)
-        if isinstance(value, ObjectValue):
-            value = {
-                field.name.value:
-                    self._get_value(info, field.value) for field in value.fields}
+        if isinstance(value, InputObjectType):
+            return value.__dict__
         else:
-            value = value.value
+            return GenericScalar.parse_literal(value)
         return value
 
     def _optimize_field_by_hints(self, store, selection, field_def, parent_type):

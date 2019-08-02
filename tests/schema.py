@@ -17,6 +17,18 @@ from .models import (
 )
 
 
+def _prefetch_children(info, filter_input):
+    if filter_input is None:
+        filter_input = {}
+
+    gte = filter_input.get('value', {}).get('gte', 0)
+    return Prefetch(
+        'children',
+        queryset=gql_optimizer.query(Item.objects.filter(value__gte=int(gte)), info),
+        to_attr='gql_custom_filtered_children',
+    )
+
+
 class RangeInput(graphene.InputObjectType):
     gte = graphene.Field(graphene.Int)
 
@@ -42,13 +54,7 @@ class ItemInterface(graphene.Interface):
     )
     children_custom_filtered = gql_optimizer.field(
         ConnectionField('tests.schema.ItemConnection', filter_input=ItemFilterInput()),
-        prefetch_related=lambda info, filter_input: Prefetch(
-            'children',
-            queryset=gql_optimizer.query(
-                Item.objects.filter(
-                    value__gte=int(filter_input.get('value', {}).get('gte', 0))), info),
-            to_attr='gql_custom_filtered_children',
-        ),
+        prefetch_related=_prefetch_children,
     )
 
     def resolve_foo(root, info):

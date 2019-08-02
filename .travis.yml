@@ -1,64 +1,50 @@
 dist: xenial
 language: python
-
 python:
   - "3.7"
   - "3.6"
   - "3.5"
   - "2.7"
-
 env:
-  matrix:
-    - DJANGO=2.2
-    - DJANGO=2.1
-    - DJANGO=2.0
-    - DJANGO=1.11
-
+  - DJANGO_VERSION=">=2.2.0,<2.3"
+  - DJANGO_VERSION=">=2.1.0,<2.2"
+  - DJANGO_VERSION=">=2.0.0,<2.1"
+  - DJANGO_VERSION=">=1.11.0,<2.0.0"
 matrix:
-  include:
-    - env: STAGE=lint
-      python: "3.6"
   exclude:
-    - python: "3.4"
-      env: DJANGO=2.2.2
-    - python: "3.4"
-      env: DJANGO=2.1.9
-    - python: "2.7"
-      env: DJANGO=2.2.2
-    - python: "2.7"
-      env: DJANGO=2.1.9
-    - python: "2.7"
-      env: DJANGO=2.0.13
-
+  - python: "2.7"
+    env: DJANGO_VERSION=">=2.2.0,<2.3"
+  - python: "2.7"
+    env: DJANGO_VERSION=">=2.1.0,<2.2"
+  - python: "2.7"
+    env: DJANGO_VERSION=">=2.0.0,<2.1"
 install:
-  - >
-    if [ -n "$DJANGO" ]; then
-      pip install -r dev-env-requirements.txt
-      pip install "django>=$DJANGO"
-      pip install codecov
-
-    elif [[ "$STAGE" == "lint" ]]; then
-      pip install flake8
-
-    fi
-
+  - pip install -r dev-env-requirements.txt
+  - pip install "django$DJANGO_VERSION"
+  - pip install codecov
 script:
-  - >
-    if [ -n "$DJANGO" ]; then
-      ./setup.py test
-
-    elif [[ "$STAGE" == "lint" ]]; then
-      flake8
-
-    fi
-
+  - ./setup.py test
 after_success:
   - codecov
-
-deploy:
-  provider: pypi
-  user: tfoxy-bot
-  password:
-    secure: K2Qh5rx1tEoOc28W7y4sYyja/QK/L8HxNjtZjwV/5cb/3GbPckzFAUAz5YdpBU+VYvOCllRcACNq/vpJN4gCmIti9gbPIUEHeBkSxEvhG91KNqO0OLplkM9AaUQP14xLxYi/tdP0twtbMNleR8FAt350KUrxCQOvt6QMuTeVErNv4bGD+QW6nPh6caeY/2Zfm5YWDQrehLfVjlthxkozxBaqlWQzXQqY80VjQ4q77JkQ0kCRVcuDUgvIsn1wGh1Sdfoegu9Grp5yQisMW7b9BkTrFaFtZasLg+SuW81quMeA8390AUiKdjS3LF2FnjetxG52VhBEnonw8JbaVr/ZLVcYtd0CChF9AxUdriJ80i7S+9SvI4JGNtG8Vdr0B8JdDklXcAycu+/tMynAqPjmRFROK3vpqMBdFfi2GO71ZECcXAuJbj30ED30MOxlPRAZMuoLmLuADrO2wH9g7h/p51XaCdnvhE+HN/gx+0Aw2e2qieD6qBEaT10UA0J3nppymmLNwUdVqTlcnjIdaLqZTKPdNSS2SWeEcvrc9Y0R0F28nQbXUvNX6stgJKSzn+zL/v31BSwIOPOKFCY5vp0fORL2zTQ/PmwmHZeOedEniphL7yrP5+UJTMnaY3l6CpwMUhabVJFkIm3jz62mohzhe7k5pe/D0x3wz+fq8gQ4vqg=
-  on:
-    tags: true
+jobs:
+  include:
+    - stage: lint
+      install:
+        - pip install flake8==3.7.7
+      script:
+        - flake8
+    - stage: deploy
+      if: tag IS present
+      install: true
+      script: skip
+      deploy:
+        provider: pypi
+        user: tfoxy-bot
+        password:
+          secure: K2Qh5rx1tEoOc28W7y4sYyja/QK/L8HxNjtZjwV/5cb/3GbPckzFAUAz5YdpBU+VYvOCllRcACNq/vpJN4gCmIti9gbPIUEHeBkSxEvhG91KNqO0OLplkM9AaUQP14xLxYi/tdP0twtbMNleR8FAt350KUrxCQOvt6QMuTeVErNv4bGD+QW6nPh6caeY/2Zfm5YWDQrehLfVjlthxkozxBaqlWQzXQqY80VjQ4q77JkQ0kCRVcuDUgvIsn1wGh1Sdfoegu9Grp5yQisMW7b9BkTrFaFtZasLg+SuW81quMeA8390AUiKdjS3LF2FnjetxG52VhBEnonw8JbaVr/ZLVcYtd0CChF9AxUdriJ80i7S+9SvI4JGNtG8Vdr0B8JdDklXcAycu+/tMynAqPjmRFROK3vpqMBdFfi2GO71ZECcXAuJbj30ED30MOxlPRAZMuoLmLuADrO2wH9g7h/p51XaCdnvhE+HN/gx+0Aw2e2qieD6qBEaT10UA0J3nppymmLNwUdVqTlcnjIdaLqZTKPdNSS2SWeEcvrc9Y0R0F28nQbXUvNX6stgJKSzn+zL/v31BSwIOPOKFCY5vp0fORL2zTQ/PmwmHZeOedEniphL7yrP5+UJTMnaY3l6CpwMUhabVJFkIm3jz62mohzhe7k5pe/D0x3wz+fq8gQ4vqg=
+        on:
+          tags: true
+stages:
+  - test
+  - lint
+  - deploy

@@ -291,8 +291,8 @@ class QueryOptimizer(object):
         if hasattr(resolve_id, 'im_func'):
             resolve_id = resolve_id.im_func
 
-        if (isinstance(resolver, functools.partial) and
-                resolver.func == GlobalID.id_resolver):
+        if (isinstance(resolver, functools.partial)
+                and resolver.func == GlobalID.id_resolver):
             return resolver.args[0] == resolve_id
         else:
             return resolver == resolve_id

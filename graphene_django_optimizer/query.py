@@ -5,6 +5,7 @@ from django.db.models import ForeignKey, Prefetch
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.fields.reverse_related import ManyToOneRel
 from graphene import InputObjectType
+from graphene.relay.node import GlobalID
 from graphene.types.generic import GenericScalar
 from graphene.types.resolver import default_resolver
 from graphene_django import DjangoObjectType
@@ -289,7 +290,12 @@ class QueryOptimizer(object):
         # For python 2 unbound method:
         if hasattr(resolve_id, 'im_func'):
             resolve_id = resolve_id.im_func
-        return resolver == resolve_id
+
+        if (isinstance(resolver, functools.partial) and
+                resolver.func == GlobalID.id_resolver):
+            return resolver.args[0] == resolve_id
+        else:
+            return resolver == resolve_id
 
     def _get_model_field_from_name(self, model, name):
         try:

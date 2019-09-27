@@ -273,8 +273,9 @@ class QueryOptimizer(object):
             resolver_fn = resolver
             if resolver_fn.func == DjangoListField.list_resolver:
                 resolver_fn = resolver_fn.args[0]
-            if resolver_fn.func == default_resolver:
+            if isinstance(resolver_fn, functools.partial) and resolver_fn.func == default_resolver:
                 return resolver_fn.args[0]
+            return resolver_fn
 
     def _is_resolver_for_id_field(self, resolver):
         resolve_id = DjangoObjectType.resolve_id

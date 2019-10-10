@@ -211,7 +211,10 @@ class QueryOptimizer(object):
         return False
 
     def _get_optimization_hints(self, resolver):
-        return getattr(resolver, 'optimization_hints', None)
+        hints = getattr(resolver, 'optimization_hints', None)
+        if not hints and isinstance(resolver, functools.partial):
+            return self._get_optimization_hints(resolver.args[0])
+        return hints
 
     def _get_value(self, info, value):
         if isinstance(value, Variable):

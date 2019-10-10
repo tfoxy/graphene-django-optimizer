@@ -1,14 +1,13 @@
 import functools
 
-from django.db.models.fields.reverse_related import ManyToOneRel
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import ForeignKey, Prefetch
 from django.db.models.constants import LOOKUP_SEP
+from django.db.models.fields.reverse_related import ManyToOneRel
 from graphene import InputObjectType
 from graphene.types.generic import GenericScalar
 from graphene.types.resolver import default_resolver
 from graphene_django import DjangoObjectType
-from graphene_django.fields import DjangoListField
 from graphql import ResolveInfo
 from graphql.execution.base import (
     get_field_def,

@@ -1,4 +1,5 @@
 import pytest
+from django.db.models import Prefetch
 
 import graphene_django_optimizer as gql_optimizer
 
@@ -175,3 +176,36 @@ def test_should_resolve_nested_variables():
     child_edges = item_edges[0]['node']['relayAllChildren']['edges'][0]
     assert len(child_edges) == 1
     assert child_edges['node']['id'] == '8'
+
+
+@pytest.mark.django_db
+def test_should_optimize_hints_on_related_relay_connections():
+    item_1 = Item.objects.create(id=9, name='foo')
+    item_1.children.create(id=10, name='bar')
+    variables = {'itemsFirst': 1, 'childrenFirst': 1}
+    query = '''
+        query Query($itemsFirst: Int!, $childrenFirst: Int!) {
+            relayItems(first: $itemsFirst) {
+                edges {
+                    node {
+                        relayAllChildren(first: $childrenFirst) {
+                            edges {
+                                node {
+                                    id
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    '''
+    info = create_resolve_info(schema, query, variables=variables)
+
+    qs = Item.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.prefetch_related(Prefetch(
+        'children',
+        Item.objects.all().only('id', 'parent_id'),
+    ))
+    assert_query_equality(items, optimized_items)

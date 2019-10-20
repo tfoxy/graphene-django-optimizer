@@ -35,6 +35,10 @@ def query(queryset, info, **options):
         - **options - optimization options/settings
             - disable_abort_only (boolean) - in case the objecttype contains any extra fields,
                                              then this will keep the "only" optimization enabled.
+            - parent_id_field (string) - when a prefetched queryset is being optimized within the
+                                         optimization hints of a parent queryset, the database id
+                                         of the parent will have to be included in the "only" list
+                                         to match the prefetched object to the parent.
     """
 
     return QueryOptimizer(info, **options).optimize(queryset)
@@ -48,6 +52,7 @@ class QueryOptimizer(object):
     def __init__(self, info, **options):
         self.root_info = info
         self.disable_abort_only = options.pop('disable_abort_only', False)
+        self.parent_id_field = options.pop('parent_id_field', None)
 
     def optimize(self, queryset):
         info = self.root_info
@@ -57,6 +62,9 @@ class QueryOptimizer(object):
             info.field_asts[0],
             # info.parent_type,
         )
+        if self.parent_id_field:
+            store.only(self.parent_id_field)
+
         return store.optimize_queryset(queryset)
 
     def _get_type(self, field_def):
@@ -190,7 +198,7 @@ class QueryOptimizer(object):
                 selection,
                 # parent_type,
             )
-            store.select_related(name, field_store)
+            store.select_related(name, field_store, model_field=model_field)
             return True
         if model_field.one_to_many or model_field.many_to_many:
             field_store = self._optimize_gql_selections(
@@ -247,6 +255,10 @@ class QueryOptimizer(object):
             optimization_hints.prefetch_related(info, *args),
             store.prefetch_list,
         )
+        self._add_optimization_hints(
+            optimization_hints.annotate(info, *args),
+            store.annotate_dict,
+        )
         if store.only_list is not None:
             self._add_optimization_hints(
                 optimization_hints.only(info, *args),
@@ -258,7 +270,11 @@ class QueryOptimizer(object):
         if source:
             if not is_iterable(source):
                 source = (source,)
-            target += source
+
+            if isinstance(target, dict):
+                target.update(source)
+            else:
+                target += source
 
     def _get_name_from_resolver(self, resolver):
         optimization_hints = self._get_optimization_hints(resolver)
@@ -319,15 +335,20 @@ class QueryOptimizerStore():
     def __init__(self, disable_abort_only=False):
         self.select_list = []
         self.prefetch_list = []
+        self.annotate_dict = {}
         self.only_list = []
         self.disable_abort_only = disable_abort_only
 
-    def select_related(self, name, store):
-        if store.select_list:
-            for select in store.select_list:
-                self.select_list.append(name + LOOKUP_SEP + select)
+    def select_related(self, name, store, model_field=None):
+        if store.annotate_dict:
+            self.only(model_field.attname)
+            self.prefetch_related(name, store, model_field.related_model.objects.all())
         else:
-            self.select_list.append(name)
+            if store.select_list:
+                for select in store.select_list:
+                    self.select_list.append(name + LOOKUP_SEP + select)
+            else:
+                self.select_list.append(name)
         for prefetch in store.prefetch_list:
             if isinstance(prefetch, Prefetch):
                 prefetch.add_prefix(name)
@@ -370,6 +391,9 @@ class QueryOptimizerStore():
         if self.prefetch_list:
             queryset = queryset.prefetch_related(*self.prefetch_list)
 
+        if self.annotate_dict:
+            queryset = queryset.annotate(**self.annotate_dict)
+
         if self.only_list:
             queryset = queryset.only(*self.only_list)
 
@@ -378,6 +402,7 @@ class QueryOptimizerStore():
     def append(self, store):
         self.select_list += store.select_list
         self.prefetch_list += store.prefetch_list
+        self.annotate_dict.update(store.annotate_dict)
         if self.only_list is not None:
             if store.only_list is None:
                 self.only_list = None

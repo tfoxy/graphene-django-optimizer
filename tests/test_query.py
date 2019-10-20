@@ -2,7 +2,7 @@ import pytest
 
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count
 import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
@@ -519,4 +519,43 @@ def test_should_only_use_the_only_and_not_select_related():
     qs = OtherItem.objects.all()
     items = gql_optimizer.query(qs, info)
     optimized_items = qs.only('id', 'name')
+    assert_query_equality(items, optimized_items)
+
+
+# @pytest.mark.django_db
+def test_should_annotate():
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                childrenCount
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only("id").annotate(gql_children_count=Count('children'))
+    assert_query_equality(items, optimized_items)
+
+
+# @pytest.mark.django_db
+def test_should_prefetch_related_when_select_related_is_annotated():
+    # parent = Item.objects.create(name='foo')
+    # Item.objects.create(name='bar', parent=parent)
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                parent {
+                    id
+                    childrenCount
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    prefetch_qs = Item.objects.only("pk").annotate(gql_children_count=Count('children'))
+    prefetch = Prefetch('parent', queryset=prefetch_qs)
+    optimized_items = qs.only("id", "parent_id").prefetch_related(prefetch)
     assert_query_equality(items, optimized_items)

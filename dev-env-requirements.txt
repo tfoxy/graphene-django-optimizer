@@ -1,6 +1,6 @@
 -r requirements.txt
-graphene==2.1.3
-graphene-django==2.2.0
+graphene==2.1.8
+graphene-django==2.7.1
 pytest==4.6.3
 pytest-django==3.5.0
 pytest-cov==2.7.1

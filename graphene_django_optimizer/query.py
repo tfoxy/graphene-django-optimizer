@@ -271,7 +271,15 @@ class QueryOptimizer(object):
         elif isinstance(resolver, functools.partial):
             resolver_fn = resolver
             if resolver_fn.func != default_resolver:
-                resolver_fn = resolver_fn.args[0]
+                # Some resolvers have the partial function as the second
+                # argument.
+                for arg in resolver_fn.args:
+                    if isinstance(arg, (str, functools.partial)):
+                        break
+                else:
+                    # No suitable instances found, default to first arg
+                    arg = resolver_fn.args[0]
+                resolver_fn = arg
             if isinstance(resolver_fn, functools.partial) and resolver_fn.func == default_resolver:
                 return resolver_fn.args[0]
             return resolver_fn

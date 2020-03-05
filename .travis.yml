@@ -10,14 +10,6 @@ env:
   - DJANGO_VERSION=">=2.1.0,<2.2"
   - DJANGO_VERSION=">=2.0.0,<2.1"
   - DJANGO_VERSION=">=1.11.0,<2.0.0"
-matrix:
-  exclude:
-  - python: "2.7"
-    env: DJANGO_VERSION=">=2.2.0,<2.3"
-  - python: "2.7"
-    env: DJANGO_VERSION=">=2.1.0,<2.2"
-  - python: "2.7"
-    env: DJANGO_VERSION=">=2.0.0,<2.1"
 install:
   - pip install -r dev-env-requirements.txt
   - pip install "django$DJANGO_VERSION"
@@ -27,6 +19,13 @@ script:
 after_success:
   - codecov
 jobs:
+  exclude:
+    - python: "2.7"
+      env: DJANGO_VERSION=">=2.2.0,<2.3"
+    - python: "2.7"
+      env: DJANGO_VERSION=">=2.1.0,<2.2"
+    - python: "2.7"
+      env: DJANGO_VERSION=">=2.0.0,<2.1"
   include:
     - stage: lint
       install:

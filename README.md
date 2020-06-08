@@ -207,3 +207,93 @@ class Query(object):
     def resolve_all_ingredients(root, info):
         return gql_optimizer.query(Ingredient.objects.all(), info, disable_abort_only=True)
 ```
+
+### Annotations
+
+The queryset can be optimized with an annotation when and only if a field is requested. To
+do so, the annotate resolver hint can be used.
+
+```py
+
+class RecipeType(gql_optimizer.OptimizedDjangoObjectType):
+    ingredient_count = graphene.Int()
+
+    class Meta:
+        model = Recipe
+        fields = ('id',)
+    
+    @gql_optimizer.resolver_hints(
+        annotate={
+            'gql_ingredient_count': Count('ingredients')
+        }
+    )
+    def resolve_ingredient_count(root, info):
+        return getattr(root, 'gql_ingredient_count')
+
+
+class Query(object):
+    all_recipes = graphene.List(RecipeType)
+
+    def resolve_all_recipes(root, info):
+        return gql_optimizer.query(Recipe.objects.all(), info)
+```
+
+When using annotations there are two caveats.
+
+1) The queryset will not be annotated if the optimization fails.
+2) If an annotation is used in a related query that will usually 
+result in a optimized `select_related`, `prefetch_related` is used instead,
+adding one additional query. See example below.
+
+```py
+class RecipeType(gql_optimizer.OptimizedDjangoObjectType):
+    ingredient_count = graphene.Int()
+
+    class Meta:
+        model = Recipe
+        fields = ('id',)
+    
+    @gql_optimizer.resolver_hints(
+        annotate={
+            'gql_ingredient_count': Count('ingredients')
+        }
+    )
+    def resolve_ingredient_count(root, info):
+        return getattr(root, 'gql_ingredient_count')
+
+
+class IngredientType(gql_optimizer.OptimizedDjangoObjectType):
+    recipe = gql_optimizer.field(
+        graphene.Field(RecipeType), model_field='recipe',
+    )
+
+    class Meta:
+        model = Ingredient
+        fields = ('id', name')
+
+
+class Query(object):
+    all_ingredients = graphene.List(IngredientType)
+
+    def resolve_all_ingredients(root, info):
+        return gql_optimizer.query(Ingredient.objects.all(), info)
+```
+
+The GraphQL query.
+
+```
+query {
+  allIngredients {
+     id
+     name
+     recipe {
+       id
+       name
+       ingredientCount
+     }
+  }
+}
+```
+
+Will resolve in two SQL queries. One to fetch all ingredients, one to prefetch
+all recipes for those ingredients.

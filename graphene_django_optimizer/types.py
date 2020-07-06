@@ -16,7 +16,7 @@ class OptimizedDjangoObjectType(DjangoObjectType):
 
     @classmethod
     def get_queryset(cls, queryset, info):
-        queryset = super().get_queryset(queryset, info)
+        queryset = super(OptimizedDjangoObjectType, cls).get_queryset(queryset, info)
         if cls.can_optimize_resolver(info):
             queryset = query(queryset, info)
         return queryset

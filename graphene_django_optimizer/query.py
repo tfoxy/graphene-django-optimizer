@@ -217,11 +217,11 @@ class QueryOptimizer(object):
         if isinstance(value, Variable):
             var_name = value.name.value
             value = info.variable_values.get(var_name)
-        if isinstance(value, InputObjectType):
+            return value
+        elif isinstance(value, InputObjectType):
             return value.__dict__
         else:
             return GenericScalar.parse_literal(value)
-        return value
 
     def _optimize_field_by_hints(self, store, selection, field_def, parent_type):
         optimization_hints = self._get_optimization_hints(field_def.resolver)

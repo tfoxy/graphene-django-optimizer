@@ -263,9 +263,9 @@ class QueryOptimizer(object):
     def _get_name_from_resolver(self, resolver):
         optimization_hints = self._get_optimization_hints(resolver)
         if optimization_hints:
-            name = optimization_hints.model_field
-            if name:
-                return name
+            name_fn = optimization_hints.model_field
+            if name_fn:
+                return name_fn()
         if self._is_resolver_for_id_field(resolver):
             return 'id'
         elif isinstance(resolver, functools.partial):

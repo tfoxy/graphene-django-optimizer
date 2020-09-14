@@ -61,7 +61,7 @@ class ItemInterface(graphene.Interface):
         return 'bar'
 
     @gql_optimizer.resolver_hints(
-        model_field='children',
+        model_field=lambda: 'children',
     )
     def resolve_children_names(root, info):
         return ' '.join(item.name for item in root.children.all())

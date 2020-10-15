@@ -40,4 +40,5 @@ class OptimizedDjangoObjectType(DjangoObjectType):
         :param id:
         :return:
         """
-        return cls.maybe_optimize(info, cls._meta.model.objects, id)
+        queryset = cls.get_queryset(cls._meta.model.objects, info)
+        return cls.maybe_optimize(info, queryset, id)

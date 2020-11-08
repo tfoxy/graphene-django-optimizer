@@ -282,6 +282,8 @@ class QueryOptimizer(object):
                 resolver_fn = arg
             if isinstance(resolver_fn, functools.partial) and resolver_fn.func == default_resolver:
                 return resolver_fn.args[0]
+            if self._is_resolver_for_id_field(resolver_fn):
+                return 'id'
             return resolver_fn
 
     def _is_resolver_for_id_field(self, resolver):

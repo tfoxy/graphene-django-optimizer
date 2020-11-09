@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -6,6 +7,7 @@ class Item(models.Model):
     parent = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True, related_name='children')
     item = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True)
     value = models.IntegerField(default=10)
+    user = models.ForeignKey(User, related_name="items", on_delete=models.PROTECT, null=True)
 
     item_type = 'simple'
 

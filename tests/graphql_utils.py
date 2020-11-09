@@ -1,3 +1,4 @@
+from django.test import RequestFactory
 from graphql import (
     ResolveInfo,
     Source,
@@ -13,14 +14,16 @@ from graphql.execution.base import (
 from graphql.pyutils.default_ordered_dict import DefaultOrderedDict
 
 
-def create_execution_context(schema, request_string, variables=None):
+def create_execution_context(schema, request_string, variables=None, user=None):
     source = Source(request_string, 'GraphQL request')
     document_ast = parse(source)
+    request = RequestFactory()
+    request.user = user
     return ExecutionContext(
         schema,
         document_ast,
         root_value=None,
-        context_value=None,
+        context_value=request,
         variable_values=variables,
         operation_name=None,
         executor=None,
@@ -42,8 +45,8 @@ def get_field_asts_from_execution_context(exe_context):
     return field_asts
 
 
-def create_resolve_info(schema, request_string, variables=None):
-    exe_context = create_execution_context(schema, request_string, variables)
+def create_resolve_info(schema, request_string, variables=None, user=None):
+    exe_context = create_execution_context(schema, request_string, variables, user)
     parent_type = get_operation_root_type(schema, exe_context.operation)
     field_asts = get_field_asts_from_execution_context(exe_context)
 

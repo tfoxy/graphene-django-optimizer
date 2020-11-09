@@ -111,6 +111,10 @@ class ItemNode(BaseItemType):
     class Meta:
         model = Item
         interfaces = (graphene.relay.Node, ItemInterface, )
+    
+    @classmethod
+    def get_queryset(cls, queryset, info):
+        return queryset.filter(user=getattr(info.context, 'user', None))
 
 
 class SomeOtherItemType(OptimizedDjangoObjectType):

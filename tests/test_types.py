@@ -1,4 +1,6 @@
 import pytest
+from django.contrib.auth.models import User
+from graphene import Node
 from graphql_relay import to_global_id
 from mock import patch
 
@@ -83,3 +85,36 @@ def test_mutating_should_not_optimize(mocked_optimizer):
     assert result
     assert result.pk == 7
     assert mocked_optimizer.call_count == 0
+
+
+@pytest.mark.django_db
+def test_get_node_from_global_id_queryset():
+    item_1 = Item.objects.create()
+    item_2 = Item.objects.create()
+
+    user = User.objects.create()
+    item_3 = Item.objects.create(user=user)
+    item_4 = Item.objects.create(user=user)
+
+    info = create_resolve_info(
+        schema,
+        '''
+        query {
+            items(id: $id) {
+                id
+                foo
+                children {
+                    id
+                    foo
+                }
+            }
+        }
+        ''',
+        user=user,
+    )
+
+    assert not Node.get_node_from_global_id(info, to_global_id("ItemNode", item_1.id))
+    assert not Node.get_node_from_global_id(info, to_global_id("ItemNode", item_2.id))
+
+    assert Node.get_node_from_global_id(info, to_global_id("ItemNode", item_3.id)) == item_3
+    assert Node.get_node_from_global_id(info, to_global_id("ItemNode", item_4.id)) == item_4

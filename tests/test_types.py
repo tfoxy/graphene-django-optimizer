@@ -83,3 +83,31 @@ def test_mutating_should_not_optimize(mocked_optimizer):
     assert result
     assert result.pk == 7
     assert mocked_optimizer.call_count == 0
+
+
+@pytest.mark.django_db
+@patch('graphene_django_optimizer.types.query',
+       return_value=SomeOtherItem.objects)
+def test_should_optimize_the_queryset(mocked_optimizer):
+    SomeOtherItem.objects.create(pk=7, name='Hello')
+
+    info = create_resolve_info(schema, '''
+        query ItemDetails {
+            someOtherItems(id: $id) {
+                id
+                foo
+                parent {
+                    id
+                }
+            }
+        }
+    ''')
+
+    info.return_type = schema.get_type('SomeOtherItemType')
+    qs = SomeOtherItem.objects.filter(pk=7)
+    result = SomeOtherItemType.get_queryset(qs, info).get()
+
+    assert result, 'Expected the item to be found and returned'
+    assert result.pk == 7, 'The item is not the correct one'
+
+    mocked_optimizer.assert_called_once_with(qs, info)

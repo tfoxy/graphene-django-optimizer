@@ -58,7 +58,7 @@ Fetching all the ingredients with the related category:
 
 ```graphql
 {
-  all_ingredients {
+  allIngredients {
     id
     name
     category {
@@ -82,7 +82,7 @@ Fetching all the categories with the related ingredients:
 
 ```graphql
 {
-  all_categories {
+  allCategories {
     id
     name
     ingredients {

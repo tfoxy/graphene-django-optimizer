@@ -8,19 +8,19 @@ from graphene import InputObjectType
 from graphene.types.generic import GenericScalar
 from graphene.types.resolver import default_resolver
 from graphene_django import DjangoObjectType
-from graphql import ResolveInfo
-from graphql.execution.base import (
-    get_field_def,
-)
+from graphql import GraphQLResolveInfo, GraphQLSchema
+from graphql.execution.execute import get_field_def
 from graphql.language.ast import (
-    FragmentSpread,
-    InlineFragment,
-    Variable,
+    FragmentSpreadNode,
+    InlineFragmentNode,
+    VariableNode,
 )
 from graphql.type.definition import (
     GraphQLInterfaceType,
     GraphQLUnionType,
 )
+
+from graphql.pyutils import Path
 
 from .utils import is_iterable
 
@@ -31,7 +31,7 @@ def query(queryset, info, **options):
 
     Arguments:
         - queryset (Django QuerySet object) - The queryset to be optimized
-        - info (GraphQL ResolveInfo object) - This is passed by the graphene-django resolve methods
+        - info (GraphQL GraphQLResolveInfo object) - This is passed by the graphene-django resolve methods
         - **options - optimization options/settings
             - disable_abort_only (boolean) - in case the objecttype contains any extra fields,
                                              then this will keep the "only" optimization enabled.
@@ -54,7 +54,7 @@ class QueryOptimizer(object):
         field_def = get_field_def(info.schema, info.parent_type, info.field_name)
         store = self._optimize_gql_selections(
             self._get_type(field_def),
-            info.field_asts[0],
+            info.field_nodes[0],
             # info.parent_type,
         )
         return store.optimize_queryset(queryset)
@@ -65,9 +65,16 @@ class QueryOptimizer(object):
             a_type = a_type.of_type
         return a_type
 
+    def _get_graphql_schema(self, schema):
+        if isinstance(schema, GraphQLSchema):
+            return schema
+        else:
+            return schema.graphql_schema
+
     def _get_possible_types(self, graphql_type):
         if isinstance(graphql_type, (GraphQLInterfaceType, GraphQLUnionType)):
-            return self.root_info.schema.get_possible_types(graphql_type)
+            graphql_schema = self._get_graphql_schema(self.root_info.schema)
+            return graphql_schema.get_possible_types(graphql_type)
         else:
             return (graphql_type,)
 
@@ -80,7 +87,8 @@ class QueryOptimizer(object):
 
     def handle_inline_fragment(self, selection, schema, possible_types, store):
         fragment_type_name = selection.type_condition.name.value
-        fragment_type = schema.get_type(fragment_type_name)
+        graphql_schema = self._get_graphql_schema(schema)
+        fragment_type = graphql_schema.get_type(fragment_type_name)
         fragment_possible_types = self._get_possible_types(fragment_type)
         for fragment_possible_type in fragment_possible_types:
             fragment_model = fragment_possible_type.graphene_type._meta.model
@@ -120,14 +128,16 @@ class QueryOptimizer(object):
             return store
         optimized_fields_by_model = {}
         schema = self.root_info.schema
-        graphql_type = schema.get_graphql_type(field_type.graphene_type)
+        graphql_schema = self._get_graphql_schema(schema)
+        graphql_type = graphql_schema.get_type(field_type.name)
+
         possible_types = self._get_possible_types(graphql_type)
         for selection in selection_set.selections:
-            if isinstance(selection, InlineFragment):
+            if isinstance(selection, InlineFragmentNode):
                 self.handle_inline_fragment(selection, schema, possible_types, store)
             else:
                 name = selection.name.value
-                if isinstance(selection, FragmentSpread):
+                if isinstance(selection, FragmentSpreadNode):
                     self.handle_fragment_spread(store, name, field_type)
                 else:
                     for possible_type in possible_types:
@@ -176,7 +186,7 @@ class QueryOptimizer(object):
             store.abort_only_optimization()
 
     def _optimize_field_by_name(self, store, model, selection, field_def):
-        name = self._get_name_from_resolver(field_def.resolver)
+        name = self._get_name_from_resolver(field_def.resolve)
         if not name:
             return False
         model_field = self._get_model_field_from_name(model, name)
@@ -215,7 +225,7 @@ class QueryOptimizer(object):
         return getattr(resolver, "optimization_hints", None)
 
     def _get_value(self, info, value):
-        if isinstance(value, Variable):
+        if isinstance(value, VariableNode):
             var_name = value.name.value
             value = info.variable_values.get(var_name)
             return value
@@ -225,7 +235,7 @@ class QueryOptimizer(object):
             return GenericScalar.parse_literal(value)
 
     def _optimize_field_by_hints(self, store, selection, field_def, parent_type):
-        optimization_hints = self._get_optimization_hints(field_def.resolver)
+        optimization_hints = self._get_optimization_hints(field_def.resolve)
         if not optimization_hints:
             return False
         info = self._create_resolve_info(
@@ -316,17 +326,19 @@ class QueryOptimizer(object):
         )
 
     def _create_resolve_info(self, field_name, field_asts, return_type, parent_type):
-        return ResolveInfo(
+        return GraphQLResolveInfo(
             field_name,
             field_asts,
             return_type,
             parent_type,
+            Path(None, 0, None),
             schema=self.root_info.schema,
             fragments=self.root_info.fragments,
             root_value=self.root_info.root_value,
             operation=self.root_info.operation,
             variable_values=self.root_info.variable_values,
             context=self.root_info.context,
+            is_awaitable=self.root_info.is_awaitable,
         )
 
 

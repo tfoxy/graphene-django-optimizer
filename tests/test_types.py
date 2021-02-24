@@ -25,9 +25,9 @@ def test_should_optimize_the_single_node(mocked_optimizer):
             }
         }
     """,
+        return_type=schema.graphql_schema.get_type("SomeOtherItemType"),
     )
 
-    info.return_type = schema.get_type("SomeOtherItemType")
     result = SomeOtherItemType.get_node(info, 7)
 
     assert result, "Expected the item to be found and returned"
@@ -55,9 +55,9 @@ def test_should_return_none_when_node_is_not_resolved(mocked_optimizer):
             }
         }
     """,
+        return_type=schema.graphql_schema.get_type("SomeOtherItemType"),
     )
 
-    info.return_type = schema.get_type("SomeOtherItemType")
     qs = SomeOtherItem.objects
     mocked_optimizer.return_value = qs
 
@@ -84,9 +84,9 @@ def test_mutating_should_not_optimize(mocked_optimizer):
             }
         }
     """,
+        return_type=schema.graphql_schema.get_type("SomeOtherItemType"),
     )
 
-    info.return_type = schema.get_type("SomeOtherItemType")
     result = DummyItemMutation.mutate(info, to_global_id("ItemNode", 7))
     assert result
     assert result.pk == 7
@@ -111,9 +111,9 @@ def test_should_optimize_the_queryset(mocked_optimizer):
             }
         }
     """,
+        return_type=schema.graphql_schema.get_type("SomeOtherItemType"),
     )
 
-    info.return_type = schema.get_type("SomeOtherItemType")
     qs = SomeOtherItem.objects.filter(pk=7)
     result = SomeOtherItemType.get_queryset(qs, info).get()
 

@@ -15,7 +15,7 @@ from .schema import schema
 from .test_utils import assert_query_equality
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_reduce_number_of_queries_by_using_select_related():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -39,7 +39,7 @@ def test_should_reduce_number_of_queries_by_using_select_related():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_reduce_number_of_queries_by_using_prefetch_related():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -64,7 +64,7 @@ def test_should_reduce_number_of_queries_by_using_prefetch_related():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_optimize_scalar_model_fields():
     # Item.objects.create(name='foo')
     info = create_resolve_info(
@@ -84,7 +84,7 @@ def test_should_optimize_scalar_model_fields():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_optimize_scalar_foreign_key_model_fields():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -105,7 +105,7 @@ def test_should_optimize_scalar_foreign_key_model_fields():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_not_try_to_optimize_non_model_fields():
     # Item.objects.create(name='foo')
     info = create_resolve_info(
@@ -125,7 +125,7 @@ def test_should_not_try_to_optimize_non_model_fields():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_not_try_to_optimize_non_field_model_fields():
     # Item.objects.create(name='foo')
     info = create_resolve_info(
@@ -145,6 +145,7 @@ def test_should_not_try_to_optimize_non_field_model_fields():
     assert_query_equality(items, optimized_items)
 
 
+@pytest.mark.django_db
 def test_should_try_to_optimize_non_field_model_fields_when_disabling_abort_only():
     # Item.objects.create(name='foo')
     info = create_resolve_info(
@@ -164,7 +165,7 @@ def test_should_try_to_optimize_non_field_model_fields_when_disabling_abort_only
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_optimize_when_using_fragments():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -190,7 +191,7 @@ def test_should_optimize_when_using_fragments():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_prefetch_field_with_camel_case_name():
     # item = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', item=item)
@@ -215,7 +216,7 @@ def test_should_prefetch_field_with_camel_case_name():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_select_nested_related_fields():
     # parent = Item.objects.create(name='foo')
     # parent = Item.objects.create(name='bar', parent=parent)
@@ -243,7 +244,7 @@ def test_should_select_nested_related_fields():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_prefetch_nested_related_fields():
     # parent = Item.objects.create(name='foo')
     # parent = Item.objects.create(name='bar', parent=parent)
@@ -273,7 +274,7 @@ def test_should_prefetch_nested_related_fields():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_prefetch_nested_select_related_field():
     # parent = Item.objects.create(name='foo')
     # item = Item.objects.create(name='foobar')
@@ -304,7 +305,7 @@ def test_should_prefetch_nested_select_related_field():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_select_nested_prefetch_related_field():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -333,7 +334,7 @@ def test_should_select_nested_prefetch_related_field():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_select_nested_prefetch_and_select_related_fields():
     # parent = Item.objects.create(name='foo')
     # item = Item.objects.create(name='bar_item')
@@ -368,7 +369,7 @@ def test_should_select_nested_prefetch_and_select_related_fields():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_fetch_fields_of_related_field():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -391,7 +392,7 @@ def test_should_fetch_fields_of_related_field():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_fetch_fields_of_prefetched_field():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -417,7 +418,7 @@ def test_should_fetch_fields_of_prefetched_field():
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_fetch_child_model_field_for_interface_field():
     # Item.objects.create(name='foo')
     # ExtraDetailedItem.objects.create(name='foo', extra_detail='test')
@@ -443,7 +444,7 @@ def test_should_fetch_child_model_field_for_interface_field():
 
 
 @pytest.mark.skip(reason="will be tested in the future")
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_fetch_field_of_child_model_when_parent_has_no_optimized_field():
     # Item.objects.create(name='foo')
     # DetailedItem.objects.create(name='foo', item_type='test')
@@ -466,6 +467,7 @@ def test_should_fetch_field_of_child_model_when_parent_has_no_optimized_field():
     assert_query_equality(items, optimized_items)
 
 
+@pytest.mark.django_db
 def test_should_fetch_field_inside_interface_fragment():
     info = create_resolve_info(
         schema,
@@ -488,6 +490,7 @@ def test_should_fetch_field_inside_interface_fragment():
     assert_query_equality(items, optimized_items)
 
 
+@pytest.mark.django_db
 def test_should_use_nested_prefetch_related_while_also_selecting_only_required_fields():
     info = create_resolve_info(
         schema,
@@ -565,7 +568,7 @@ def test_should_check_reverse_relations_add_foreign_key():
     assert len(expected_query_capture) == len(optimized_query_capture)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_only_use_the_only_and_not_select_related():
     info = create_resolve_info(
         schema,

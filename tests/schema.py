@@ -99,6 +99,7 @@ class BaseItemType(OptimizedDjangoObjectType):
 
     class Meta:
         model = Item
+        fields = "__all__"
 
     @gql_optimizer.resolver_hints(
         model_field="children",
@@ -110,6 +111,8 @@ class BaseItemType(OptimizedDjangoObjectType):
 class ItemNode(BaseItemType):
     class Meta:
         model = Item
+        fields = "__all__"
+
         interfaces = (
             graphene.relay.Node,
             ItemInterface,
@@ -119,16 +122,19 @@ class ItemNode(BaseItemType):
 class SomeOtherItemType(OptimizedDjangoObjectType):
     class Meta:
         model = SomeOtherItem
+        fields = "__all__"
 
 
 class OtherItemType(OptimizedDjangoObjectType):
     class Meta:
         model = OtherItem
+        fields = "__all__"
 
 
 class ItemType(BaseItemType):
     class Meta:
         model = Item
+        fields = "__all__"
         interfaces = (ItemInterface,)
 
 
@@ -144,29 +150,34 @@ class DetailedInterface(graphene.Interface):
 class DetailedItemType(ItemType):
     class Meta:
         model = DetailedItem
+        fields = "__all__"
         interfaces = (ItemInterface, DetailedInterface)
 
 
 class RelatedItemType(ItemType):
     class Meta:
         model = RelatedItem
+        fields = "__all__"
         interfaces = (ItemInterface,)
 
 
 class ExtraDetailedItemType(DetailedItemType):
     class Meta:
         model = ExtraDetailedItem
+        fields = "__all__"
         interfaces = (ItemInterface,)
 
 
 class RelatedOneToManyItemType(OptimizedDjangoObjectType):
     class Meta:
         model = RelatedOneToManyItem
+        fields = "__all__"
 
 
 class UnrelatedModelType(OptimizedDjangoObjectType):
     class Meta:
         model = UnrelatedModel
+        fields = "__all__"
         interfaces = (DetailedInterface,)
 
 
@@ -200,6 +211,21 @@ class Query(graphene.ObjectType):
         return gql_optimizer.query(OtherItemType.objects.all(), info)
 
 
-schema = graphene.Schema(
-    query=Query, types=(UnrelatedModelType,), mutation=DummyItemMutation
-)
+class Schema(graphene.Schema):
+    @property
+    def query_type(self):
+        return self.graphql_schema.get_type("Query")
+
+    @property
+    def mutation_type(self):
+        return self.graphql_schema.get_type("Mutation")
+
+    @property
+    def subscription_type(self):
+        return self.graphql_schema.get_type("Subscription")
+
+    def get_type(self, _type):
+        return self.graphql_schema.get_type(_type)
+
+
+schema = Schema(query=Query, types=(UnrelatedModelType,), mutation=DummyItemMutation)

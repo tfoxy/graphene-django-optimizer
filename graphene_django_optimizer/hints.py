@@ -19,11 +19,7 @@ def _normalize_hint_value(value):
 
 class OptimizationHints(object):
     def __init__(
-        self,
-        model_field=None,
-        select_related=noop,
-        prefetch_related=noop,
-        only=noop,
+        self, model_field=None, select_related=noop, prefetch_related=noop, only=noop,
     ):
         self.model_field = _normalize_model_field(model_field)
         self.prefetch_related = _normalize_hint_value(prefetch_related)

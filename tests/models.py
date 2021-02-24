@@ -3,11 +3,13 @@ from django.db import models
 
 class Item(models.Model):
     name = models.CharField(max_length=100, blank=True)
-    parent = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True, related_name='children')
-    item = models.ForeignKey('Item', on_delete=models.SET_NULL, null=True)
+    parent = models.ForeignKey(
+        "Item", on_delete=models.SET_NULL, null=True, related_name="children"
+    )
+    item = models.ForeignKey("Item", on_delete=models.SET_NULL, null=True)
     value = models.IntegerField(default=10)
 
-    item_type = 'simple'
+    item_type = "simple"
 
     @property
     def title(self):
@@ -32,7 +34,7 @@ class RelatedItem(Item):
 
 class RelatedOneToManyItem(models.Model):
     name = models.CharField(max_length=100, blank=True)
-    item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name='otm_items')
+    item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name="otm_items")
 
 
 class ExtraDetailedItem(DetailedItem):
@@ -49,4 +51,6 @@ class SomeOtherItem(models.Model):
 
 class OtherItem(models.Model):
     name = models.CharField(max_length=100, blank=True)
-    some_other_item = models.ForeignKey('SomeOtherItem', on_delete=models.PROTECT, null=False)
+    some_other_item = models.ForeignKey(
+        "SomeOtherItem", on_delete=models.PROTECT, null=False
+    )

@@ -40,7 +40,7 @@ class IngredientType(DjangoObjectType):
         model = Ingredient
 
 
-class Query(object):
+class Query(graphene.ObjectType):
     all_categories = graphene.List(CategoryType)
     all_ingredients = graphene.List(IngredientType)
 

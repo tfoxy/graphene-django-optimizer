@@ -5,7 +5,6 @@ python:
   - "3.7"
   - "3.6"
   - "3.5"
-  - "2.7"
 env:
   - DJANGO_VERSION=">=3.1.0,<3.2"
   - DJANGO_VERSION=">=3.0.0,<3.1"
@@ -23,15 +22,6 @@ after_success:
   - codecov
 jobs:
   exclude:
-    - python: "2.7"
-      env: DJANGO_VERSION=">=2.2.0,<2.3"
-    - python: "2.7"
-      env: DJANGO_VERSION=">=2.1.0,<2.2"
-    - python: "2.7"
-      env: DJANGO_VERSION=">=2.0.0,<2.1"
-    - python: "2.7"
-      env: DJANGO_VERSION=">=3.0.0,<3.1"
-    - python: "2.7"
       env: DJANGO_VERSION=">=3.1.0,<3.2"
     - python: "3.5"
       env: DJANGO_VERSION=">=3.0.0,<3.1"

@@ -9,7 +9,9 @@ from .test_utils import assert_query_equality
 
 
 def test_should_optimize_non_django_field_if_it_has_an_optimization_hint_in_the_field():
-    info = create_resolve_info(schema, '''
+    info = create_resolve_info(
+        schema,
+        """
         query {
             items(name: "bar") {
                 id
@@ -19,23 +21,27 @@ def test_should_optimize_non_django_field_if_it_has_an_optimization_hint_in_the_
                 }
             }
         }
-    ''')
-    qs = Item.objects.filter(name='bar')
+    """,
+    )
+    qs = Item.objects.filter(name="bar")
     items = gql_optimizer.query(qs, info)
-    optimized_items = qs.select_related('parent')
+    optimized_items = qs.select_related("parent")
     assert_query_equality(items, optimized_items)
 
 
 def test_should_optimize_with_only_hint():
-    info = create_resolve_info(schema, '''
+    info = create_resolve_info(
+        schema,
+        """
         query {
             items(name: "foo") {
                 id
                 title
             }
         }
-    ''')
-    qs = Item.objects.filter(name='foo')
+    """,
+    )
+    qs = Item.objects.filter(name="foo")
     items = gql_optimizer.query(qs, info)
-    optimized_items = qs.only('id', 'name')
+    optimized_items = qs.only("id", "name")
     assert_query_equality(items, optimized_items)

@@ -12,7 +12,8 @@ class OptimizedDjangoObjectType(DjangoObjectType):
     def can_optimize_resolver(cls, resolver_info):
         return (
             isinstance(resolver_info.return_type, GrapheneObjectType)
-            and resolver_info.return_type.graphene_type is cls)
+            and resolver_info.return_type.graphene_type is cls
+        )
 
     @classmethod
     def get_queryset(cls, queryset, info):

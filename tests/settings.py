@@ -1,9 +1,7 @@
-INSTALLED_APPS = (
-    'tests',
-)
+INSTALLED_APPS = ("tests",)
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
     },
 }
-SECRET_KEY = 'dummy'
+SECRET_KEY = "dummy"

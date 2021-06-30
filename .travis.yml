@@ -6,11 +6,7 @@ python:
   - "3.6"
 env:
   - DJANGO_VERSION=">=3.1.0,<3.2"
-  - DJANGO_VERSION=">=3.0.0,<3.1"
   - DJANGO_VERSION=">=2.2.0,<2.3"
-  - DJANGO_VERSION=">=2.1.0,<2.2"
-  - DJANGO_VERSION=">=2.0.0,<2.1"
-  - DJANGO_VERSION=">=1.11.0,<2.0.0"
 install:
   - pip install -r dev-env-requirements.txt
   - pip install "django$DJANGO_VERSION"

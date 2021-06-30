@@ -4,7 +4,6 @@ python:
   - "3.8"
   - "3.7"
   - "3.6"
-  - "3.5"
 env:
   - DJANGO_VERSION=">=3.1.0,<3.2"
   - DJANGO_VERSION=">=3.0.0,<3.1"
@@ -21,12 +20,6 @@ script:
 after_success:
   - codecov
 jobs:
-  exclude:
-      env: DJANGO_VERSION=">=3.1.0,<3.2"
-    - python: "3.5"
-      env: DJANGO_VERSION=">=3.0.0,<3.1"
-    - python: "3.5"
-      env: DJANGO_VERSION=">=3.1.0,<3.2"
   include:
     - stage: lint
       install:

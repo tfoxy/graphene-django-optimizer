@@ -14,7 +14,7 @@ from graphql.pyutils.default_ordered_dict import DefaultOrderedDict
 
 
 def create_execution_context(schema, request_string, variables=None):
-    source = Source(request_string, 'GraphQL request')
+    source = Source(request_string, "GraphQL request")
     document_ast = parse(source)
     return ExecutionContext(
         schema,
@@ -35,7 +35,7 @@ def get_field_asts_from_execution_context(exe_context):
         type,
         exe_context.operation.selection_set,
         DefaultOrderedDict(list),
-        set()
+        set(),
     )
     # field_asts = next(iter(fields.values()))
     field_asts = tuple(fields.values())[0]
@@ -69,5 +69,5 @@ def create_resolve_info(schema, request_string, variables=None):
         root_value=exe_context.root_value,
         operation=exe_context.operation,
         variable_values=exe_context.variable_values,
-        context=context
+        context=context,
     )

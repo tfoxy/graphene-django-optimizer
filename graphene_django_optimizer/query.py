@@ -1,4 +1,5 @@
 import functools
+from typing import List, Optional
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import ForeignKey, Prefetch
@@ -331,10 +332,13 @@ class QueryOptimizer(object):
 
 
 class QueryOptimizerStore:
+    select_list: List[str] = []
+    select_list: List[str] = []
+    prefetch_list: List[str] = []
+    only_list: List[str] = []
+    disable_abort_only: Optional[bool] = False
+
     def __init__(self, disable_abort_only=False):
-        self.select_list = []
-        self.prefetch_list = []
-        self.only_list = []
         self.disable_abort_only = disable_abort_only
 
     def select_related(self, name, store):
@@ -380,13 +384,13 @@ class QueryOptimizerStore:
 
     def optimize_queryset(self, queryset):
         if self.select_list:
-            queryset = queryset.select_related(*self.select_list)
+            queryset = queryset.select_related(*set(self.select_list))
 
         if self.prefetch_list:
-            queryset = queryset.prefetch_related(*self.prefetch_list)
+            queryset = queryset.prefetch_related(*set(self.prefetch_list))
 
         if self.only_list:
-            queryset = queryset.only(*self.only_list)
+            queryset = queryset.only(*set(self.only_list))
 
         return queryset
 

@@ -3,9 +3,7 @@ import pytest
 import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
-from .models import (
-    Item,
-)
+from .models import Item
 from .schema import schema
 from .test_utils import assert_query_equality
 
@@ -37,6 +35,7 @@ def test_should_return_valid_result_in_a_relay_query():
     assert result.data["relayItems"]["edges"][0]["node"]["name"] == "foo"
 
 
+@pytest.mark.django_db
 def test_should_reduce_number_of_queries_in_relay_schema_by_using_select_related():
     info = create_resolve_info(
         schema,
@@ -62,6 +61,7 @@ def test_should_reduce_number_of_queries_in_relay_schema_by_using_select_related
     assert_query_equality(items, optimized_items)
 
 
+@pytest.mark.django_db
 def test_should_reduce_number_of_queries_in_relay_schema_by_using_prefetch_related():
     info = create_resolve_info(
         schema,
@@ -88,6 +88,7 @@ def test_should_reduce_number_of_queries_in_relay_schema_by_using_prefetch_relat
     assert_query_equality(items, optimized_items)
 
 
+@pytest.mark.django_db
 def test_should_optimize_query_by_only_requesting_id_field():
     try:
         from django.db.models import DEFERRED  # noqa: F401

@@ -4,14 +4,12 @@ from django.db.models import Prefetch
 import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
-from .models import (
-    Item,
-)
+from .models import Item
 from .schema import schema
 from .test_utils import assert_query_equality
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_optimize_non_django_field_if_it_has_an_optimization_hint_in_the_resolver():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -39,7 +37,7 @@ def test_should_optimize_non_django_field_if_it_has_an_optimization_hint_in_the_
     assert_query_equality(items, optimized_items)
 
 
-# @pytest.mark.django_db
+@pytest.mark.django_db
 def test_should_optimize_with_prefetch_related_as_a_string():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)
@@ -62,6 +60,7 @@ def test_should_optimize_with_prefetch_related_as_a_string():
     assert_query_equality(items, optimized_items)
 
 
+@pytest.mark.django_db
 def test_should_optimize_with_prefetch_related_as_a_function():
     # parent = Item.objects.create(name='foo')
     # Item.objects.create(name='bar', parent=parent)

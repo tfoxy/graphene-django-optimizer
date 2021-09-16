@@ -397,7 +397,17 @@ class QueryOptimizerStore:
             queryset = queryset.select_related(*self.select_list)
 
         if self.prefetch_list:
-            queryset = queryset.prefetch_related(*self.prefetch_list)
+            queryset = queryset.prefetch_related(
+                *[
+                    prefetch_related_lookup
+                    for prefetch_related_lookup in self.prefetch_list
+                    if not (
+                        hasattr(queryset, "_prefetch_related_lookups")
+                        and prefetch_related_lookup
+                        in queryset._prefetch_related_lookups
+                    )
+                ]
+            )
 
         if self.only_list:
             queryset = queryset.only(*self.only_list)

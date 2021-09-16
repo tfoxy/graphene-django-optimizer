@@ -269,7 +269,9 @@ class QueryOptimizer(object):
         if source:
             if not is_iterable(source):
                 source = (source,)
-            target += source
+            target += [
+                source_item for source_item in source if source_item not in target
+            ]
 
     def _get_name_from_resolver(self, resolver):
         optimization_hints = self._get_optimization_hints(resolver)

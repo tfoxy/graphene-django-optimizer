@@ -52,6 +52,10 @@ class ItemInterface(graphene.Interface):
         "tests.schema.ItemType",
         name=graphene.String(required=True),
     )
+    aux_filtered_children = graphene.List(
+        "tests.schema.ItemType",
+        name=graphene.String(required=True),
+    )
     children_custom_filtered = gql_optimizer.field(
         ConnectionField("tests.schema.ItemConnection", filter_input=ItemFilterInput()),
         prefetch_related=_prefetch_children,
@@ -80,6 +84,20 @@ class ItemInterface(graphene.Interface):
         ),
     )
     def resolve_filtered_children(root, info, name):
+        return getattr(root, "gql_filtered_children_" + name)
+
+    @gql_optimizer.resolver_hints(
+        prefetch_related=lambda info, name: Prefetch(
+            "children",
+            queryset=gql_optimizer.query(
+                Item.objects.filter(name=f"some_prefix {name}"), info
+            ),
+            # Different queryset than resolve_filtered_children but same to_attr, on purpose
+            # to check equality of Prefetch is based only on to_attr attribute, as it is implemented in Django.
+            to_attr="gql_filtered_children_" + name,
+        ),
+    )
+    def resolve_aux_filtered_children(root, info, name):
         return getattr(root, "gql_filtered_children_" + name)
 
     def resolve_children_custom_filtered(root, info, *_args):

@@ -585,3 +585,34 @@ def test_should_only_use_the_only_and_not_select_related():
     items = gql_optimizer.query(qs, info)
     optimized_items = qs.only("id", "name")
     assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_accept_two_hints_with_same_prefetch_to_attr_and_keep_one_of_them():
+    info = create_resolve_info(
+        schema,
+        """
+        query {
+            items(name: "foo") {
+                filteredChildren(name: "bar") {
+                    id
+                    name
+                }
+                auxFilteredChildren(name: "bar") { # Same name to generate Prefetch with same to_attr
+                    id
+                    name
+                }
+            }
+        }
+    """,
+    )
+    qs = Item.objects.filter(name="foo")
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.prefetch_related(
+        Prefetch(
+            "children",
+            queryset=Item.objects.filter(name="bar").only("id", "name"),
+            to_attr="gql_filtered_children_foo",
+        )
+    )
+    assert_query_equality(items, optimized_items)

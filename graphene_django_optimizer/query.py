@@ -14,6 +14,7 @@ from graphql.language.ast import (
     FragmentSpreadNode,
     InlineFragmentNode,
     VariableNode,
+    ObjectValueNode,
 )
 from graphql.type.definition import (
     GraphQLInterfaceType,
@@ -225,7 +226,12 @@ class QueryOptimizer(object):
         return getattr(resolver, "optimization_hints", None)
 
     def _get_value(self, info, value):
-        if isinstance(value, VariableNode):
+        if isinstance(value, ObjectValueNode):
+            return {
+                field.name.value: self._get_value(info, field.value)
+                for field in value.fields
+            }
+        elif isinstance(value, VariableNode):
             var_name = value.name.value
             value = info.variable_values.get(var_name)
             return value

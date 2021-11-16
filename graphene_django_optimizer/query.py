@@ -400,7 +400,7 @@ class QueryOptimizerStore:
             queryset = queryset.prefetch_related(
                 *[
                     prefetch_related_lookup
-                    for prefetch_related_lookup in self.prefetch_list
+                    for prefetch_related_lookup in list(dict.fromkeys(self.prefetch_list))
                     if not (
                         hasattr(queryset, "_prefetch_related_lookups")
                         and prefetch_related_lookup

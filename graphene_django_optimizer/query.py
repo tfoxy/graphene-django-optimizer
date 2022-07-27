@@ -9,7 +9,6 @@ from graphene.types.generic import GenericScalar
 from graphene.types.resolver import default_resolver
 from graphene_django import DjangoObjectType
 from graphql import GraphQLResolveInfo, GraphQLSchema
-from graphql.execution.execute import get_field_def
 from graphql.language.ast import (
     FragmentSpreadNode,
     InlineFragmentNode,
@@ -22,7 +21,7 @@ from graphql.type.definition import (
 
 from graphql.pyutils import Path
 
-from .utils import is_iterable
+from .utils import is_iterable, get_field_def_compat
 
 
 def query(queryset, info, **options):
@@ -51,7 +50,9 @@ class QueryOptimizer(object):
 
     def optimize(self, queryset):
         info = self.root_info
-        field_def = get_field_def(info.schema, info.parent_type, info.field_name)
+        field_def = get_field_def_compat(
+            info.schema, info.parent_type, info.field_nodes[0]
+        )
         store = self._optimize_gql_selections(
             self._get_type(field_def),
             info.field_nodes[0],

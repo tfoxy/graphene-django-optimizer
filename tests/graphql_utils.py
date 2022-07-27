@@ -6,14 +6,13 @@ from graphql import (
     parse,
 )
 from graphql.execution.collect_fields import collect_fields
-from graphql.execution.execute import (
-    ExecutionContext,
-    get_field_def,
-)
+from graphql.execution.execute import ExecutionContext
 from graphql.utilities import get_operation_root_type
 from collections import defaultdict
 
 from graphql.pyutils import Path
+
+from graphene_django_optimizer.utils import get_field_def_compat
 
 
 def create_execution_context(schema, request_string, variables=None):
@@ -28,6 +27,7 @@ def create_execution_context(schema, request_string, variables=None):
         operation_name=None,
         middleware=None,
     )
+
 
 def get_field_asts_from_execution_context(exe_context):
     if graphql.version_info < (3, 2):
@@ -55,11 +55,8 @@ def create_resolve_info(schema, request_string, variables=None, return_type=None
     parent_type = get_operation_root_type(schema, exe_context.operation)
     field_asts = get_field_asts_from_execution_context(exe_context)
 
-    field_ast = field_asts[0]
-    field_name = field_ast.name.value
-
     if return_type is None:
-        field_def = get_field_def(schema, parent_type, field_name)
+        field_def = get_field_def_compat(schema, parent_type, field_asts[0])
         if not field_def:
             return Undefined
         return_type = field_def.type
@@ -68,7 +65,7 @@ def create_resolve_info(schema, request_string, variables=None, return_type=None
     # is provided to every resolve function within an execution. It is commonly
     # used to represent an authenticated user, or request-specific caches.
     return GraphQLResolveInfo(
-        field_name,
+        field_asts[0].name.value,
         field_asts,
         return_type,
         parent_type,

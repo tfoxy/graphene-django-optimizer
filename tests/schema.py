@@ -1,5 +1,7 @@
 from django.db.models import Prefetch
 import graphene
+from django.db.models import Prefetch, Count, Value, F, CharField
+from django.db.models.functions import Concat
 from graphene import ConnectionField, relay
 from graphene_django.fields import DjangoConnectionField
 import graphene_django_optimizer as gql_optimizer
@@ -46,6 +48,7 @@ class ItemInterface(graphene.Interface):
     item_type = graphene.String()
     father = graphene.Field("tests.schema.ItemType")
     all_children = graphene.List("tests.schema.ItemType")
+    prefetched_children = graphene.List('tests.schema.ItemType')
     children_names = graphene.String()
     aux_children_names = graphene.String()
     filtered_children = graphene.List(
@@ -60,6 +63,8 @@ class ItemInterface(graphene.Interface):
         ConnectionField("tests.schema.ItemConnection", filter_input=ItemFilterInput()),
         prefetch_related=_prefetch_children,
     )
+    children_count = graphene.Int()
+    name_with_prefix = graphene.String(prefix=graphene.String(required=True))
 
     def resolve_foo(root, info):
         return "bar"
@@ -69,6 +74,18 @@ class ItemInterface(graphene.Interface):
     )
     def resolve_children_names(root, info):
         return " ".join(item.name for item in root.children.all())
+
+    @gql_optimizer.resolver_hints(
+        prefetch_related=lambda info: Prefetch(
+            "children",
+            queryset=gql_optimizer.QueryOptimizer(
+                info, parent_id_field="parent_id"
+            ).optimize(Item.objects.all()),
+            to_attr="gql_prefetched_children",
+        )
+    )
+    def resolve_prefetched_children(root, info):
+        return getattr(root, 'gql_prefetched_children')
 
     @gql_optimizer.resolver_hints(
         prefetch_related="children",
@@ -103,6 +120,23 @@ class ItemInterface(graphene.Interface):
     def resolve_children_custom_filtered(root, info, *_args):
         return getattr(root, "gql_custom_filtered_children")
 
+    @gql_optimizer.resolver_hints(
+        annotate={
+            'gql_children_count': Count('children')
+        }
+    )
+    def resolve_children_count(root, info):
+        return getattr(root, 'gql_children_count')
+
+    @gql_optimizer.resolver_hints(
+        annotate=lambda info, prefix: {
+            'gql_name_with_prefix': Concat(
+                Value(prefix), Value(' '), F('name'), output_field=CharField()
+            )
+        }
+    )
+    def resolve_name_with_prefix(root, info, prefix):
+        return getattr(root, 'gql_name_with_prefix')
 
 class BaseItemType(OptimizedDjangoObjectType):
     title = gql_optimizer.field(

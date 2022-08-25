@@ -1,4 +1,5 @@
 import pytest
+from django.db.models import Count, Prefetch
 
 import graphene_django_optimizer as gql_optimizer
 
@@ -201,3 +202,49 @@ def test_should_resolve_nested_variables():
     assert len(child_edges) == 1
     assert child_edges["node"]["id"] == "SXRlbU5vZGU6OA=="
     assert child_edges["node"]["parentId"] == "SXRlbU5vZGU6Nw=="
+
+
+
+@pytest.mark.django_db
+def test_should_annotate_queries_in_relay_schema():
+    info = create_resolve_info(schema, '''
+        query {
+            relayItems {
+                edges {
+                    node {
+                        id
+                        childrenCount
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only("id").annotate(gql_children_count=Count('children'))
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_prefetch_related_when_using_annotated_select_related_in_relay_schema():
+    info = create_resolve_info(schema, '''
+        query {
+            relayItems {
+                edges {
+                    node {
+                        id
+                        parent {
+                          id
+                          childrenCount
+                        }
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.all()
+    items = gql_optimizer.query(qs, info)
+    prefetch_qs = Item.objects.only("pk").annotate(gql_children_count=Count('children'))
+    prefetch = Prefetch('parent', queryset=prefetch_qs)
+    optimized_items = qs.only("id", "parent_id").prefetch_related(prefetch)
+    assert_query_equality(items, optimized_items) 

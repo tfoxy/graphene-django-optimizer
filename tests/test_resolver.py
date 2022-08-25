@@ -1,6 +1,8 @@
 import pytest
 
 from django.db.models import Prefetch
+from django.db.models import Prefetch, CharField, Value, F
+from django.db.models.functions import Concat
 import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
@@ -194,3 +196,44 @@ def test_should_return_valid_result_with_prefetch_related_as_a_function_using_va
     assert (
         result.data["items"][0]["filteredChildren"][0]["parentId"] == "SXRlbVR5cGU6MQ=="
     )
+
+
+
+@pytest.mark.django_db
+def test_should_optimize_with_annotate_as_a_function():
+    info = create_resolve_info(schema, '''
+        query {
+            items(name: "foo") {
+                id
+                nameWithPrefix(prefix: "The")
+            }
+        }
+    ''')
+    qs = Item.objects.filter(name='foo')
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only("id").annotate(gql_name_with_prefix=Concat(
+        Value('The'), Value(' '), F('name'), output_field=CharField()
+    ))
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_return_valid_result_with_annotate_as_a_function(django_assert_num_queries):
+    parent = Item.objects.create(id=1, name='foo')
+    Item.objects.create(id=2, name='bar', parent=parent)
+    Item.objects.create(id=3, name='foobar', parent=parent)
+    with django_assert_num_queries(2):
+        result = schema.execute('''
+            query {
+                items(name: "foo") {
+                    id
+                    prefetchedChildren {
+                        id
+                        nameWithPrefix(prefix: "The")
+                    }
+                }
+            }
+        ''')
+    assert not result.errors
+    assert result.data['items'][0]['prefetchedChildren'][0]['nameWithPrefix'] == 'The bar'
+    assert result.data['items'][0]['prefetchedChildren'][1]['nameWithPrefix'] == 'The foobar' 

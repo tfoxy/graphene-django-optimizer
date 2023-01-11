@@ -51,7 +51,7 @@ class QueryOptimizer(object):
 
     def optimize(self, queryset):
         info = self.root_info
-        field_def = get_field_def(info.schema, info.parent_type, info.field_name)
+        field_def = get_field_def(info.schema, info.parent_type, info.field_nodes[0])
         store = self._optimize_gql_selections(
             self._get_type(field_def),
             info.field_nodes[0],

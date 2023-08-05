@@ -8,15 +8,13 @@
 
 Optimize queries executed by [graphene-django](https://github.com/graphql-python/graphene-django) automatically, using [`select_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#select-related), [`prefetch_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#prefetch-related) and [`only`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#only) methods of Django QuerySet.
 
-
-
 ## Install
 
 ```bash
 pip install graphene-django-optimizer
 ```
 
-*Note: If you are using Graphene V2, please install version `0.8`. v0.9 and forward will support only Graphene V3*
+_Note: If you are using Graphene V2, please install version `0.8`. v0.9 and forward will support only Graphene V3_
 
 ## Usage
 
@@ -53,7 +51,6 @@ class Query(graphene.ObjectType):
         return gql_optimizer.query(Ingredient.objects.all(), info)
 ```
 
-
 We will show some graphql queries and the queryset that will be executed.
 
 Fetching all the ingredients with the related category:
@@ -64,8 +61,8 @@ Fetching all the ingredients with the related category:
     id
     name
     category {
-        id
-        name
+      id
+      name
     }
   }
 }
@@ -88,8 +85,8 @@ Fetching all the categories with the related ingredients:
     id
     name
     ingredients {
-        id
-        name
+      id
+      name
     }
   }
 }
@@ -106,7 +103,6 @@ categories = (
     ))
 )
 ```
-
 
 ## Advanced usage
 
@@ -185,7 +181,6 @@ class CartType(gql_optimizer.OptimizedDjangoObjectType):
 
 With these hints, any field can be optimized.
 
-
 ### Optimize with non model fields
 
 Sometimes we need to have a custom non model fields. In those cases, the optimizer would not optimize with the Django `.only()` method.
@@ -198,7 +193,7 @@ class IngredientType(gql_optimizer.OptimizedDjangoObjectType):
 
     class Meta:
         model = Ingredient
-    
+
     def resolve_calculated_calories(root, info):
         return get_calories_for_ingredient(root.id)
 
@@ -209,3 +204,7 @@ class Query(object):
     def resolve_all_ingredients(root, info):
         return gql_optimizer.query(Ingredient.objects.all(), info, disable_abort_only=True)
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md)

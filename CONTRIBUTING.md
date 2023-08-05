@@ -1,21 +1,18 @@
 # Contributing
 
-
 ## Environment
 
 The system must have installed:
 
-* python 3
-* virtualenv
+- python 3
 
 ```sh
-virtualenv -p python3 venv
+python -m venv venv
 . venv/bin/activate
 pip install -r dev-requirements.txt
 # run tests:
 python setup.py test
 ```
-
 
 ## Publish
 

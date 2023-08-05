@@ -1,12 +1,11 @@
-venv/
-venv2/
-venv3/
+venv*/
 *.pyc
 .vscode/
 .idea/
 *.egg-info/
 .eggs/
 .pytest_cache/
+.tool-versions
 dist/
 build/
 .coverage

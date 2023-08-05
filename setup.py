@@ -14,7 +14,7 @@ def read(fname):
 
 setup(
     name="graphene-django-optimizer",
-    version="0.9.1",
+    version="0.10.0",
     author="Tomás Fox",
     author_email="tomas.c.fox@gmail.com",
     description="Optimize database access inside graphene queries.",

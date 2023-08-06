@@ -616,3 +616,42 @@ def test_should_accept_two_hints_with_same_prefetch_to_attr_and_keep_one_of_them
         )
     )
     assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_use_only_with_node_interface():
+    info = create_resolve_info(schema, '''
+        query {
+            relayItems {
+                edges {
+                    node {
+                        id
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.only('id')
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_not_try_to_optimize_non_field_model_fields_on_relay_node():
+    info = create_resolve_info(schema, '''
+        query {
+            relayItems {
+                edges {
+                    node {
+                        id
+                        foo
+                    }
+                }
+            }
+        }
+    ''')
+    qs = Item.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs
+    assert_query_equality(items, optimized_items)

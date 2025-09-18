@@ -127,15 +127,23 @@ class QueryOptimizer(object):
         selection_set = field_ast.selection_set
         if not selection_set:
             return store
-        optimized_fields_by_model = {}
+        
         schema = self.root_info.schema
         graphql_schema = self._get_graphql_schema(schema)
         graphql_type = graphql_schema.get_type(field_type.name)
 
         possible_types = self._get_possible_types(graphql_type)
+        self._process_selections(store, schema, field_type, possible_types, selection_set)
+        return store
+    
+    def _process_selections(self, store, schema, field_type, possible_types, selection_set):
+        optimized_fields_by_model = {}
         for selection in selection_set.selections:
             if isinstance(selection, InlineFragmentNode):
-                self.handle_inline_fragment(selection, schema, possible_types, store)
+                if selection.type_condition.name.value != field_type.name:
+                    self.handle_inline_fragment(selection, schema, possible_types, store)
+                else: # handle cases were interface is the same as target field
+                    self._process_selections(store, schema, field_type, possible_types, selection.selection_set)
             else:
                 name = selection.name.value
                 if isinstance(selection, FragmentSpreadNode):
@@ -173,7 +181,6 @@ class QueryOptimizer(object):
                                         selection_field_def,
                                         possible_type,
                                     )
-        return store
 
     def _optimize_field(self, store, model, selection, field_def, parent_type):
         optimized_by_name = self._optimize_field_by_name(

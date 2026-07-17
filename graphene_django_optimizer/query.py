@@ -1,4 +1,5 @@
 import functools
+from collections.abc import Mapping
 
 from django.core.exceptions import FieldDoesNotExist
 from django.db.models import ForeignKey, Prefetch
@@ -12,9 +13,14 @@ from graphene.utils.str_converters import to_camel_case, to_snake_case
 from graphene_django import DjangoObjectType
 from graphene_django.registry import get_global_registry
 from graphql import GraphQLResolveInfo, GraphQLSchema
-from graphql.language.ast import (FieldNode, FragmentSpreadNode,
-                                  InlineFragmentNode, NameNode,
-                                  SelectionSetNode, VariableNode)
+from graphql.language.ast import (
+    FieldNode,
+    FragmentSpreadNode,
+    InlineFragmentNode,
+    NameNode,
+    SelectionSetNode,
+    VariableNode,
+)
 from graphql.pyutils import Path
 from graphql.type.definition import GraphQLInterfaceType, GraphQLUnionType
 
@@ -155,8 +161,7 @@ class QueryOptimizer(object):
                             )
                             store.append(relay_store)
                             try:
-                                from django.db.models import \
-                                    DEFERRED  # noqa: F401
+                                from django.db.models import DEFERRED  # noqa: F401
                             except ImportError:
                                 store.abort_only_optimization()
                         else:
@@ -254,6 +259,15 @@ class QueryOptimizer(object):
         field_store = self._optimize_gql_selections(field_type, selection_next)
 
         if model_field.many_to_one or model_field.one_to_one:
+            if field_store.annotation_map:
+                # Django annotations belong to the queryset's model and are not
+                # attached to instances materialized through select_related().
+                # Use an optimized prefetch so the related instances receive
+                # their requested annotations.
+                store.only(model_field.get_attname())
+                related_queryset = model_field.related_model.objects.all()
+                store.prefetch_related(name, field_store, related_queryset)
+                return True
             store.select_related(name, field_store)
             return True
         if model_field.one_to_many or model_field.many_to_many:
@@ -307,6 +321,13 @@ class QueryOptimizer(object):
                 optimization_hints.only(info, *args),
                 store.only_list,
             )
+        annotations = optimization_hints.annotate(info, *args)
+        if not isinstance(annotations, Mapping):
+            raise TypeError(
+                "annotate hint callable must return a mapping of annotation names "
+                "to Django expressions"
+            )
+        store.annotation_map.update(annotations)
         return True
 
     def _add_optimization_hints(self, source, target):
@@ -399,6 +420,7 @@ class QueryOptimizerStore:
         self.select_list = []
         self.prefetch_list = []
         self.only_list = []
+        self.annotation_map = {}
         self.disable_abort_only = disable_abort_only
 
     def select_related(self, name, store):
@@ -421,7 +443,7 @@ class QueryOptimizerStore:
                     self.only_list.append(name + LOOKUP_SEP + only)
 
     def prefetch_related(self, name, store, queryset):
-        if store.select_list or store.only_list:
+        if store.select_list or store.only_list or store.annotation_map:
             queryset = store.optimize_queryset(queryset)
             self.prefetch_list.append(Prefetch(name, queryset=queryset))
         elif store.prefetch_list:
@@ -443,6 +465,9 @@ class QueryOptimizerStore:
             self.only_list = None
 
     def optimize_queryset(self, queryset):
+        if self.annotation_map:
+            queryset = queryset.annotate(**self.annotation_map)
+
         if self.select_list:
             queryset = queryset.select_related(*self.select_list)
 
@@ -457,6 +482,7 @@ class QueryOptimizerStore:
     def append(self, store):
         self.select_list += store.select_list
         self.prefetch_list += store.prefetch_list
+        self.annotation_map.update(store.annotation_map)
         if self.only_list is not None:
             if store.only_list is None:
                 self.only_list = None

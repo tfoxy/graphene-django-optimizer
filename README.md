@@ -6,7 +6,7 @@
 ![python version](https://img.shields.io/pypi/pyversions/graphene-django-optimizer.svg)
 ![django version](https://img.shields.io/pypi/djversions/graphene-django-optimizer.svg)
 
-Optimize queries executed by [graphene-django](https://github.com/graphql-python/graphene-django) automatically, using [`select_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#select-related), [`prefetch_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#prefetch-related) and [`only`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#only) methods of Django QuerySet.
+Optimize queries executed by [graphene-django](https://github.com/graphql-python/graphene-django) automatically, using [`select_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#select-related), [`prefetch_related`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#prefetch-related), [`only`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#only), and [`annotate`](https://docs.djangoproject.com/en/2.0/ref/models/querysets/#annotate) methods of Django QuerySet.
 
 ## Install
 
@@ -180,6 +180,29 @@ class CartType(gql_optimizer.OptimizedDjangoObjectType):
 ```
 
 With these hints, any field can be optimized.
+
+Resolver fields backed by Django expressions can use the `annotate` argument.
+It accepts either a mapping or a function returning a mapping. The annotation is
+only added when the associated GraphQL field is selected.
+
+```py
+from django.db.models import F
+
+
+class ItemType(gql_optimizer.OptimizedDjangoObjectType):
+    doubled_value = graphene.Int()
+
+    @gql_optimizer.resolver_hints(
+        annotate=lambda info: {
+            'gql_doubled_value': F('value') * 2,
+        },
+    )
+    def resolve_doubled_value(root, info):
+        return root.gql_doubled_value
+```
+
+Annotations requested on related objects are applied to an optimized prefetch
+queryset so the annotation is available on each related model instance.
 
 ### Optimize with non model fields
 

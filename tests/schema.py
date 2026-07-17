@@ -1,4 +1,4 @@
-from django.db.models import Prefetch
+from django.db.models import F, Prefetch
 import graphene
 from graphene import ConnectionField, relay
 from graphene_django.fields import DjangoConnectionField
@@ -48,6 +48,8 @@ class ItemInterface(graphene.Interface):
     all_children = graphene.List("tests.schema.ItemType")
     children_names = graphene.String()
     aux_children_names = graphene.String()
+    annotated_name = graphene.String()
+    multiplied_value = graphene.Int(multiplier=graphene.Int(required=True))
     filtered_children = graphene.List(
         "tests.schema.ItemType",
         name=graphene.String(required=True),
@@ -63,6 +65,20 @@ class ItemInterface(graphene.Interface):
 
     def resolve_foo(root, info):
         return "bar"
+
+    @gql_optimizer.resolver_hints(
+        annotate={"gql_annotated_name": F("name")},
+    )
+    def resolve_annotated_name(root, info):
+        return root.gql_annotated_name
+
+    @gql_optimizer.resolver_hints(
+        annotate=lambda info, multiplier: {
+            "gql_multiplied_value": F("value") * multiplier
+        },
+    )
+    def resolve_multiplied_value(root, info, multiplier):
+        return root.gql_multiplied_value
 
     @gql_optimizer.resolver_hints(
         model_field=lambda: "children",
@@ -215,11 +231,15 @@ class DummyItemMutation(graphene.Mutation):
 
 class Query(graphene.ObjectType):
     items = graphene.List(ItemInterface, name=graphene.String(required=True))
+    typed_items = graphene.List(ItemType, name=graphene.String(required=True))
     relay_items = DjangoConnectionField(ItemNode)
     other_items = graphene.List(OtherItemType)
     some_other_items = graphene.List(SomeOtherItemType)
 
     def resolve_items(root, info, name):
+        return gql_optimizer.query(Item.objects.filter(name=name), info)
+
+    def resolve_typed_items(root, info, name):
         return gql_optimizer.query(Item.objects.filter(name=name), info)
 
     def resolve_relay_items(root, info, **kwargs):

@@ -8,6 +8,8 @@ from graphene_django_optimizer import OptimizedDjangoObjectType
 from .models import (
     DetailedItem,
     ExtraDetailedItem,
+    GenericComment,
+    GenericCommentedItem,
     Item,
     RelatedItem,
     UnrelatedModel,
@@ -199,6 +201,27 @@ class UnrelatedModelType(OptimizedDjangoObjectType):
         interfaces = (DetailedInterface,)
 
 
+class GenericCommentType(OptimizedDjangoObjectType):
+    class Meta:
+        model = GenericComment
+        fields = ("id", "text", "who")
+
+
+class GenericCommentedItemType(OptimizedDjangoObjectType):
+    # graphene-django does not convert GenericRelation fields automatically.
+    comments = graphene.List(GenericCommentType)
+
+    class Meta:
+        model = GenericCommentedItem
+        fields = ("id", "name")
+
+    @gql_optimizer.resolver_hints(
+        model_field="comments",
+    )
+    def resolve_comments(root, info):
+        return root.comments.all()
+
+
 class DummyItemMutation(graphene.Mutation):
     item = graphene.Field(ItemNode, description="The retrieved item.", required=False)
 
@@ -218,6 +241,7 @@ class Query(graphene.ObjectType):
     relay_items = DjangoConnectionField(ItemNode)
     other_items = graphene.List(OtherItemType)
     some_other_items = graphene.List(SomeOtherItemType)
+    generic_commented_items = graphene.List(GenericCommentedItemType)
 
     def resolve_items(root, info, name):
         return gql_optimizer.query(Item.objects.filter(name=name), info)

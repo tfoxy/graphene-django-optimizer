@@ -1,4 +1,7 @@
-INSTALLED_APPS = ("tests",)
+INSTALLED_APPS = (
+    "django.contrib.contenttypes",
+    "tests",
+)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

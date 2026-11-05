@@ -213,6 +213,11 @@ class QueryOptimizer(object):
 
             if isinstance(model_field, ManyToOneRel):
                 field_store.only(model_field.field.name)
+            elif self._is_generic_relation(model_field):
+                # Django matches prefetched generic objects to their parents
+                # by object id and content type, so both must be loaded.
+                field_store.only(model_field.object_id_field_name)
+                field_store.only(model_field.content_type_field_name)
 
             related_queryset = model_field.related_model.objects.all()
             store.prefetch_related(name, field_store, related_queryset)
@@ -326,6 +331,13 @@ class QueryOptimizer(object):
             isinstance(model_field, ForeignKey)
             and model_field.name != name
             and model_field.get_attname() == name
+        )
+
+    def _is_generic_relation(self, model_field):
+        # Duck-typed so that django.contrib.contenttypes doesn't need to be
+        # installed: importing GenericRelation imports the ContentType model.
+        return hasattr(model_field, "object_id_field_name") and hasattr(
+            model_field, "content_type_field_name"
         )
 
     def _create_resolve_info(self, field_name, field_asts, return_type, parent_type):

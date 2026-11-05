@@ -7,9 +7,12 @@ import graphene_django_optimizer as gql_optimizer
 
 from .graphql_utils import create_resolve_info
 from .models import (
+    GenericComment,
+    GenericCommentedItem,
     Item,
     OtherItem,
     RelatedOneToManyItem,
+    SomeOtherItem,
 )
 from .schema import schema
 from .test_utils import assert_query_equality
@@ -616,3 +619,108 @@ def test_should_accept_two_hints_with_same_prefetch_to_attr_and_keep_one_of_them
         )
     )
     assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+def test_should_check_generic_relations_add_object_id_and_content_type():
+    info = create_resolve_info(
+        schema,
+        """
+        query {
+            genericCommentedItems {
+                comments {
+                    id
+                }
+            }
+        }
+    """,
+    )
+    qs = GenericCommentedItem.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.prefetch_related(
+        Prefetch(
+            "comments",
+            queryset=GenericComment.objects.only("id", "object_id", "content_type"),
+        ),
+    )
+    assert_query_equality(items, optimized_items)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("num_items,num_comments", [(1, 1), (3, 3), (5, 4)])
+def test_should_prefetch_generic_relations_in_constant_number_of_queries(
+    num_items, num_comments
+):
+    info = create_resolve_info(
+        schema,
+        """
+        query {
+            genericCommentedItems {
+                comments {
+                    id
+                }
+            }
+        }
+    """,
+    )
+    for i in range(num_items):
+        item = GenericCommentedItem.objects.create(name="foo{}".format(i))
+        for k in range(num_comments):
+            item.comments.create(text="bar{}{}".format(i, k))
+
+    items = gql_optimizer.query(GenericCommentedItem.objects.all(), info)
+
+    with CaptureQueriesContext(connection) as query_capture:
+        comment_ids = [comment.id for item in items for comment in item.comments.all()]
+
+    assert len(comment_ids) == num_items * num_comments
+    # One query for the items and one for the prefetched comments. Without
+    # object_id/content_type in only(), Django reloads both deferred fields
+    # for every comment when matching it to its parent.
+    assert len(query_capture.captured_queries) == 2, [
+        q["sql"] for q in query_capture.captured_queries
+    ]
+
+
+@pytest.mark.django_db
+def test_should_select_related_inside_generic_relation_prefetch():
+    info = create_resolve_info(
+        schema,
+        """
+        query {
+            genericCommentedItems {
+                comments {
+                    id
+                    who {
+                        id
+                    }
+                }
+            }
+        }
+    """,
+    )
+    qs = GenericCommentedItem.objects.all()
+    items = gql_optimizer.query(qs, info)
+    optimized_items = qs.prefetch_related(
+        Prefetch(
+            "comments",
+            queryset=GenericComment.objects.select_related("who").only(
+                "id", "object_id", "content_type", "who__id"
+            ),
+        ),
+    )
+    assert_query_equality(items, optimized_items)
+
+    who = SomeOtherItem.objects.create(name="who")
+    for i in range(3):
+        item = GenericCommentedItem.objects.create(name="foo{}".format(i))
+        for k in range(3):
+            item.comments.create(text="bar{}{}".format(i, k), who=who)
+
+    with CaptureQueriesContext(connection) as query_capture:
+        who_ids = [comment.who.id for item in items for comment in item.comments.all()]
+
+    assert who_ids == [who.id] * 9
+    assert len(query_capture.captured_queries) == 2, [
+        q["sql"] for q in query_capture.captured_queries
+    ]

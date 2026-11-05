@@ -1,3 +1,5 @@
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 
 
@@ -54,3 +56,16 @@ class OtherItem(models.Model):
     some_other_item = models.ForeignKey(
         "SomeOtherItem", on_delete=models.PROTECT, null=False
     )
+
+
+class GenericComment(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey("content_type", "object_id")
+    text = models.CharField(max_length=100, blank=True)
+    who = models.ForeignKey(SomeOtherItem, on_delete=models.SET_NULL, null=True)
+
+
+class GenericCommentedItem(models.Model):
+    name = models.CharField(max_length=100, blank=True)
+    comments = GenericRelation(GenericComment)

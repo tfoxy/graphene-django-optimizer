@@ -1,9 +1,9 @@
 -r requirements.txt
 graphene==3.0b7
 graphene-django==3.0.0b7
-pytest==4.6.3
-pytest-django==3.5.0
-pytest-cov==2.7.1
+pytest==9.2.0
+pytest-django==4.14.0
+pytest-cov==7.1.0
 flake8==3.7.7
 mock==2.0.0
 black==21.6b0

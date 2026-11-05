@@ -8,12 +8,22 @@ jobs:
     strategy:
       max-parallel: 4
       matrix:
-        django: [">=3.1.0,<3.2", ">=2.2.0,<2.3"]
-        python-version: ["3.7", "3.8"]
+        django: [">=3.2.0,<3.3", ">=4.2.0,<4.3", ">=5.2.0,<5.3"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        exclude:
+          # Only test Python versions each Django release supports.
+          - django: ">=3.2.0,<3.3"
+            python-version: "3.11"
+          - django: ">=3.2.0,<3.3"
+            python-version: "3.12"
+          - django: ">=3.2.0,<3.3"
+            python-version: "3.13"
+          - django: ">=4.2.0,<4.3"
+            python-version: "3.13"
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
@@ -22,6 +32,6 @@ jobs:
           pip install -r dev-env-requirements.txt
           pip install "django${{ matrix.django }}"
       - name: Test
-        run: ./setup.py test
+        run: python -m pytest
       - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v7

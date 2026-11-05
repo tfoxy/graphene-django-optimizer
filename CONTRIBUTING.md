@@ -11,7 +11,7 @@ python -m venv venv
 . venv/bin/activate
 pip install -r dev-requirements.txt
 # run tests:
-python setup.py test
+python -m pytest
 ```
 
 ## Publish
